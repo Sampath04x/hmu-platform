@@ -11,49 +11,65 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "No interests provided" }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    // Using gemini-1.5-flash for speed or gemini-1.5-pro for higher quality
+    const model = genAI.getGenerativeModel({ 
+      model: "gemini-1.5-pro",
+      generationConfig: {
+        temperature: 0.9,
+        topP: 0.95,
+        topK: 64,
+        maxOutputTokens: 1024,
+        responseMimeType: "application/json",
+      }
+    });
 
     const prompt = `You are an intelligent campus matchmaking AI for a platform called HMU (Find Your People). 
 A college student has selected these interests: ${interests.join(", ")}.
-${answers ? `They also answered these questions:
+${answers ? `They also answered these introspective questions:
 - Q: What's something most people don't know about you? A: ${answers.q1 || "not answered"}
 - Q: What are you trying to figure out? A: ${answers.q2 || "not answered"}
 - Q: What kind of person do you click with? A: ${answers.q3 || "not answered"}` : ""}
 
-Based on this information, generate a JSON response with:
-1. "personalityType": A creative 2-3 word personality archetype (e.g., "The Quiet Creator", "The Curious Wanderer", "The Night Thinker")
-2. "vibe": One sentence describing their energy (max 15 words)
-3. "matchStyle": How they likely connect with people (max 20 words)
-4. "compatibleWith": Array of 3 interest areas they would likely click with someone over
-5. "matchCodename": A mysterious poetic codename for their anonymous match profile (one word, nature/element themed, like Ember, Tide, Solstice, Drift, Prism, Echo)
-6. "icebreaker": A single unique conversation prompt tailored to their interests (max 25 words, starts with "Would you rather..." or "What if..." or a thought-provoking question)
-7. "strengths": Array of 3 short personality strengths based on their interests
-8. "peopleLookingFor": 1 sentence describing the type of person they'd connect with (max 20 words)
+Based on this information, generate a HIGHLY CREATIVE and poetic match profile. Ensure the archetype feels unique and not generic.
 
-Respond with ONLY valid JSON, no markdown, no explanation.`;
+Generate a JSON response with:
+1. "personalityType": A creative 2-3 word personality archetype (e.g., "The Midnight Architect", "The Analog Dreamer", "The Kinetic Thinker")
+2. "vibe": A poetic sentence describing their psychological energy (max 15 words)
+3. "matchStyle": How they intuitively connect with others (max 20 words)
+4. "compatibleWith": Array of 3 niche interest areas they'd click with someone over (e.g., "Obscure Cinema", "Recursive Algorithms", "Street Photography")
+5. "matchCodename": A mysterious, evocative one-word codename (nature or abstract themed like Catalyst, Drift, Nocturne, Prism, Zenith)
+6. "icebreaker": A high-impact, thought-provoking conversation starter (max 25 words)
+7. "strengths": Array of 3 distinct personality strengths
+8. "peopleLookingFor": 1 sentence describing the energy they'd most likely harmonize with (max 20 words)
+
+Return ONLY a valid JSON object.`;
 
     const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+    let text = result.response.text().trim();
     
-    // Clean up any markdown if present
-    const cleaned = text.replace(/```json\n?|```\n?/g, "").trim();
-    const data = JSON.parse(cleaned);
+    // Robust cleaning for JSON parsing
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      text = jsonMatch[0];
+    }
+    
+    const data = JSON.parse(text);
 
     return NextResponse.json({ success: true, profile: data });
   } catch (err) {
-    console.error("Gemini error:", err);
-    // Return fallback if Gemini is not configured
+    console.error("Gemini matching error:", err);
+    // Return high-quality fallback if Gemini is not configured or fails
     return NextResponse.json({
       success: true,
       profile: {
-        personalityType: "The Curious Explorer",
-        vibe: "Someone who finds meaning in small details and deep conversations.",
-        matchStyle: "You connect slowly but deeply, preferring real over small talk.",
-        compatibleWith: ["Creative pursuits", "Intellectual curiosity", "Late-night adventures"],
-        matchCodename: "Ember",
-        icebreaker: "What's a hobby you picked up that completely changed how you see the world?",
-        strengths: ["Deep listener", "Creative thinker", "Genuine connector"],
-        peopleLookingFor: "Someone who stays curious and doesn't mind a bit of chaos.",
+        personalityType: "The Curious Voyager",
+        vibe: "A quiet intensity driven by curiosity and a love for the complex.",
+        matchStyle: "You connect through shared discovery and meaningful silence.",
+        compatibleWith: ["Experimental Media", "Urban Exploration", "Deep Theory"],
+        matchCodename: "Horizon",
+        icebreaker: "If you could inhabit one piece of art for an afternoon, which one would it be?",
+        strengths: ["Infinite Curiosity", "Radical Honesty", "Analytical Depth"],
+        peopleLookingFor: "Someone who isn't afraid of the unasked questions.",
       },
       fallback: true,
     });
