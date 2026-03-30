@@ -1,100 +1,189 @@
-import Image from "next/image";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { RadioIcon, GhostIcon, UsersIcon, SparkleIcon } from "lucide-react";
 
-export default function Home() {
+export default function LandingPage() {
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="https://nextjs.org/icons/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+    <div className="min-h-screen bg-background relative overflow-hidden flex flex-col">
+      {/* Background orbs */}
+      <div className="absolute top-[-20%] left-[-10%] w-[50%] h-[50%] bg-indigo-500/10 rounded-full blur-[120px] animate-pulse" />
+      <div className="absolute bottom-[-20%] right-[-10%] w-[50%] h-[50%] bg-violet-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: "1s" }} />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="https://nextjs.org/icons/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* Nav */}
+      <header className="py-5 px-6 sm:px-12 flex justify-between items-center z-10 border-b border-border/40 bg-background/50 backdrop-blur-md sticky top-0">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-sora font-bold text-white tracking-widest text-xs">HMU</div>
+          <span className="font-sora font-semibold text-xl tracking-tight">HMU</span>
         </div>
+        <nav className="flex items-center gap-3">
+          <Link href="/signup">
+            <Button variant="ghost" className="hidden sm:inline-flex text-muted-foreground hover:text-white">Sign In</Button>
+          </Link>
+          <Link href="/discover">
+            <Button className="bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl">Find My People</Button>
+          </Link>
+        </nav>
+      </header>
+
+      <main className="flex-1 z-10">
+        {/* ─── Hero ─── */}
+        <section className="px-6 py-24 sm:py-32 flex flex-col items-center text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-4 py-2 text-indigo-400 text-xs font-semibold tracking-wider mb-8">
+            <SparkleIcon className="w-3.5 h-3.5" />
+            AI-POWERED CAMPUS MATCHING
+          </div>
+          <h1 className="text-5xl sm:text-7xl font-bold font-sora tracking-tight text-white mb-6">
+            Find Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-500">Actual</span> People.
+          </h1>
+          <p className="text-xl sm:text-2xl text-muted-foreground mb-4 max-w-2xl font-dmsans">
+            Not proximity friends. Not orientation defaults.
+            The ones who actually get you.
+          </p>
+          <p className="text-sm text-indigo-400/80 mb-10 font-medium">
+            Tell us your interests → our AI builds your match profile → connect anonymously
+          </p>
+          <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+            <Link href="/discover">
+              <Button size="lg" className="w-full sm:w-auto bg-indigo-500 hover:bg-indigo-600 text-white text-lg px-8 h-14 rounded-xl font-semibold shadow-[0_0_30px_rgba(99,102,241,0.3)]">
+                <SparkleIcon className="w-5 h-5 mr-2" />
+                Discover My Vibe →
+              </Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="lg" variant="outline" className="w-full sm:w-auto text-indigo-400 border-indigo-500/30 hover:bg-indigo-500/10 text-lg px-8 h-14 rounded-xl bg-transparent">
+                Already have an account
+              </Button>
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+            Verified students only. Your campus. Your people.
+          </div>
+        </section>
+
+        {/* ─── How the AI works ─── */}
+        <section className="px-6 py-16 bg-card/20 border-y border-border/30">
+          <div className="max-w-4xl mx-auto text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-sora font-bold mb-3">The AI does the heavy lifting</h2>
+            <p className="text-muted-foreground text-lg">No algorithm noise. Just genuine compatibility.</p>
+          </div>
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-6">
+            {[
+              { step: "01", title: "Pick your interests", body: "Choose from 40+ interest tags across arts, tech, culture, sports, and lifestyle. More = better matches.", color: "text-indigo-400" },
+              { step: "02", title: "Answer 3 questions", body: "Optional but powerful. The AI reads between the lines to find your personality archetype.", color: "text-violet-400" },
+              { step: "03", title: "Get your match profile", body: "Receive your codename, personality type, vibe score, and AI-generated icebreaker. Then sign up.", color: "text-emerald-400" },
+            ].map(({ step, title, body, color }) => (
+              <div key={step} className="p-6 bg-card border border-border/50 rounded-2xl hover:border-indigo-500/30 transition-colors group">
+                <div className={`text-4xl font-sora font-bold ${color} opacity-30 group-hover:opacity-60 transition-opacity mb-4`}>{step}</div>
+                <h3 className="font-sora font-semibold text-white text-lg mb-2">{title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{body}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-10 text-center">
+            <Link href="/discover">
+              <Button size="lg" className="bg-indigo-500 hover:bg-indigo-600 text-white px-8 h-12 rounded-xl font-semibold shadow-[0_0_20px_rgba(99,102,241,0.3)]">
+                Try it now — it&apos;s free
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* ─── Features ─── */}
+        <section className="px-6 py-24">
+          <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+            <Card className="p-8 bg-card border-border/50 glow-hover group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center mb-6 border border-indigo-500/20">
+                <RadioIcon className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h3 className="text-xl font-sora font-semibold mb-3">Campus Pulse</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">Canteen ratings, professor reviews, club events, senior tips. Everything your college forgot to tell you.</p>
+            </Card>
+            <Card className="p-8 bg-card border-border/50 glow-hover group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-violet-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-12 h-12 rounded-2xl bg-violet-500/10 flex items-center justify-center mb-6 border border-violet-500/20">
+                <GhostIcon className="w-6 h-6 text-violet-400" />
+              </div>
+              <h3 className="text-xl font-sora font-semibold mb-3">Anonymous Match</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">Get matched with someone who thinks like you. Exchange voice messages anonymously. Reveal when you&apos;re ready.</p>
+            </Card>
+            <Card className="p-8 bg-card border-border/50 glow-hover group relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center mb-6 border border-emerald-500/20">
+                <UsersIcon className="w-6 h-6 text-emerald-400" />
+              </div>
+              <h3 className="text-xl font-sora font-semibold mb-3">Real Communities</h3>
+              <p className="text-muted-foreground leading-relaxed text-sm">Every club. Every event. Every interest group. One place to find where you actually belong.</p>
+            </Card>
+          </div>
+        </section>
+
+        {/* ─── How It Works ─── */}
+        <section id="how-it-works" className="px-6 py-16 bg-card/20 border-t border-border/30 max-w-4xl mx-auto">
+          <h2 className="text-3xl sm:text-4xl font-sora font-bold text-center mb-12">From stranger to friend in 5 steps</h2>
+          <div className="space-y-4">
+            {[
+              "Tell us your interests — the AI starts building your profile",
+              "Verify with your college email",
+              "Explore your campus — feed, clubs, events",
+              "Get your anonymous match (codename only, no photo)",
+              "Talk. Exchange voice messages. Reveal when you both feel ready.",
+            ].map((step, idx) => (
+              <div key={idx} className="flex items-center gap-5 bg-card border border-border p-5 rounded-2xl group hover:border-indigo-500/30 transition-colors relative overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-indigo-500/30 group-hover:bg-indigo-500 transition-colors" />
+                <div className="text-3xl font-sora font-bold text-indigo-500/20 group-hover:text-indigo-500/80 transition-colors w-12 shrink-0 text-center">
+                  {String(idx + 1).padStart(2, "0")}
+                </div>
+                <div className="text-foreground font-medium text-sm sm:text-base">{step}</div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ─── Social Proof ─── */}
+        <section className="px-6 py-24 border-t border-border/40">
+          <div className="max-w-6xl mx-auto">
+            <h2 className="text-4xl font-sora font-bold text-center mb-12">Don&apos;t just take our word for it</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {[
+                { quote: "I talked to someone for 2 weeks before we revealed. Now they&apos;re one of my closest friends.", name: "Priya", college: "BITS Pilani" },
+                { quote: "The AI matched me with someone who had the exact same niche interests. Wild how accurate it was.", name: "Arjun", college: "VIT Vellore" },
+                { quote: "Found my entire friend group through the Photography Club. The anonymity takes all the pressure off.", name: "Riya", college: "SRM University" },
+              ].map((t, i) => (
+                <Card key={i} className="p-7 bg-card flex flex-col justify-between border-border/50 glow-hover">
+                  <p className="text-base italic text-muted-foreground mb-6 leading-relaxed">&ldquo;{t.quote}&rdquo;</p>
+                  <div className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10 border-2 border-indigo-500/20">
+                      <AvatarFallback className="bg-indigo-500/10 text-indigo-400 font-bold text-sm">{t.name[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-white text-sm">{t.name}</div>
+                      <div className="text-xs text-muted-foreground">{t.college}</div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="https://nextjs.org/icons/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
+
+      <footer className="py-10 px-6 border-t border-border/40 bg-card/10 z-10">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded bg-indigo-500 flex items-center justify-center font-sora font-bold text-white text-[8px] tracking-widest">HMU</div>
+            <span className="font-sora font-medium">HMU</span>
+            <span className="text-muted-foreground text-sm border-l border-border pl-4">Find Your Actual People</span>
+          </div>
+          <div className="flex gap-5 text-sm text-muted-foreground">
+            {["About", "Privacy", "Terms", "Instagram", "Twitter"].map(l => (
+              <Link key={l} href="#" className="hover:text-white transition-colors">{l}</Link>
+            ))}
+          </div>
+        </div>
       </footer>
     </div>
   );
