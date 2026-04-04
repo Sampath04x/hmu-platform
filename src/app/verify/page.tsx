@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { LockKeyholeIcon } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
+import { useUser } from "@/context/UserContext";
 
 export default function VerifyPage() {
   const router = useRouter();
+  const { email, setIsLoggedIn } = useUser();
   const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
   const [timer, setTimer] = useState(60);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   useEffect(() => {
@@ -60,10 +65,23 @@ export default function VerifyPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.join("").length === 6) {
-      router.push("/onboarding");
+      setIsLoading(true);
+      setErrorMsg("");
+      try {
+        await apiFetch("/auth/verify-email", {
+          method: "POST",
+          body: JSON.stringify({ token: otp.join("") })
+        });
+        setIsLoggedIn(true);
+        router.push("/onboarding");
+      } catch (err: any) {
+        setErrorMsg(err.message || "Failed to verify code");
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -77,11 +95,16 @@ export default function VerifyPage() {
           <div>
             <CardTitle className="text-3xl font-sora font-bold mb-2">Check Your Email</CardTitle>
             <CardDescription className="text-base text-muted-foreground">
-              We sent a 6-digit code to <span className="text-white font-medium">priya@bits-pilani.ac.in</span>
+              We sent a 6-digit code to <span className="text-white font-medium">{email || "your email"}</span>
             </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pb-8">
+          {errorMsg && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg text-sm mb-4 text-center">
+              {errorMsg}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="flex justify-center gap-2 sm:gap-4">
               {otp.map((data, index) => (
@@ -100,8 +123,8 @@ export default function VerifyPage() {
               ))}
             </div>
 
-            <Button type="submit" className="w-full h-14 text-lg font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl" disabled={otp.join("").length !== 6}>
-              Verify Email
+            <Button type="submit" className="w-full h-14 text-lg font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl" disabled={otp.join("").length !== 6 || isLoading}>
+              {isLoading ? "Verifying..." : "Verify Email"}
             </Button>
           </form>
         </CardContent>

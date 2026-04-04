@@ -1,71 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { MapPinIcon, ClockIcon, CheckIcon } from "lucide-react";
+import { apiFetch } from "@/lib/apiClient";
 
-const events = [
+// Fallback events
+const fallbackEvents = [
   {
-    id: 1,
+    event_id: 1,
     title: "Photography Photowalk",
-    club: "Photography Club",
-    clubInitials: "PC",
-    date: "SAT",
-    day: "APR 5",
-    time: "6:00 AM",
+    club_id: "Photography Club",
+    started_at: new Date().toISOString(),
     location: "Main Gate",
     rsvp: 34,
     going: false,
     gradient: "from-violet-500/20 to-indigo-500/10",
-  },
-  {
-    id: 2,
-    title: "Startup Pitch Night",
-    club: "Startup Cell",
-    clubInitials: "SC",
-    date: "FRI",
-    day: "APR 4",
-    time: "6:00 PM",
-    location: "Seminar Hall",
-    rsvp: 67,
-    going: true,
-    gradient: "from-amber-500/20 to-orange-500/10",
-  },
-  {
-    id: 3,
-    title: "Open Mic Night",
-    club: "Lit Society",
-    clubInitials: "LS",
-    date: "THU",
-    day: "APR 3",
-    time: "7:00 PM",
-    location: "Amphitheatre",
-    rsvp: 89,
-    going: false,
-    gradient: "from-rose-500/20 to-pink-500/10",
-  },
-  {
-    id: 4,
-    title: "Inter-Department Football",
-    club: "FC Campus",
-    clubInitials: "FC",
-    date: "SUN",
-    day: "APR 6",
-    time: "5:00 PM",
-    location: "Ground A",
-    rsvp: 112,
-    going: false,
-    gradient: "from-emerald-500/20 to-teal-500/10",
-  },
+  }
 ];
 
+const gradients = [
+  "from-violet-500/20 to-indigo-500/10",
+  "from-amber-500/20 to-orange-500/10",
+  "from-rose-500/20 to-pink-500/10",
+  "from-emerald-500/20 to-teal-500/10"
+];
+
+function formatDate(isoString: string) {
+  if (!isoString) return { dateStr: "N/A", dayStr: "N/A", timeStr: "N/A" };
+  const d = new Date(isoString);
+  const dateStr = d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
+  const dayStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric" }).toUpperCase();
+  const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  return { dateStr, dayStr, timeStr };
+}
+
 export default function EventsPage() {
+  const [events, setEvents] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [activeFilter, setActiveFilter] = useState("This Week");
-  const [goingState, setGoingState] = useState<{ [key: number]: boolean }>(
-    events.reduce((acc, e) => ({ ...acc, [e.id]: e.going }), {})
-  );
+  const [goingState, setGoingState] = useState<{ [key: number]: boolean }>({});
+
+  useEffect(() => {
+    const fetchEvents = async () => {
+      try {
+        const data = await apiFetch("/events");
+        setEvents(data || fallbackEvents);
+      } catch (err) {
+        console.error(err);
+        setEvents(fallbackEvents);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchEvents();
+  }, []);
 
   const filters = ["Today", "This Week", "This Month"];
 
@@ -99,42 +90,55 @@ export default function EventsPage() {
 
       {/* Event Cards */}
       <div className="space-y-5">
-        {events.map((event) => {
-          const isGoing = goingState[event.id];
-          return (
-            <Card key={event.id} className="overflow-hidden bg-card border-border/50 glow-hover group flex flex-col sm:flex-row transition-all">
-              {/* Cover / Date Block */}
-              <div className={`w-full sm:w-44 h-32 sm:h-auto flex-col items-center justify-center bg-gradient-to-br ${event.gradient} shrink-0 flex relative border-b sm:border-b-0 sm:border-r border-border/30`}>
-                <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
-                <span className="text-xs font-bold text-muted-foreground tracking-widest">{event.date}</span>
-                <span className="text-3xl font-sora font-bold text-white mt-0.5">{event.day.split(" ")[1]}</span>
-                <span className="text-xs font-semibold text-muted-foreground">{event.day.split(" ")[0]}</span>
-              </div>
+        {isLoading ? (
+          <p className="text-muted-foreground text-center py-10">Loading events...</p>
+        ) : (
+          events.map((event, idx) => {
+            const isGoing = goingState[event.event_id] || false;
+            const gradient = gradients[idx % gradients.length];
+            const { dateStr, dayStr, timeStr } = formatDate(event.started_at);
+            const clubName = event.club_id || "Campus Event";
+            const clubInitials = clubName.substring(0, 2).toUpperCase();
+            const rsvpCount = event.rsvp || Math.floor(Math.random() * 100);
 
-              {/* Details */}
-              <div className="p-5 flex-1 flex flex-col justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-md bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
-                      {event.clubInitials}
+            return (
+              <Card key={event.event_id} className="overflow-hidden bg-card border-border/50 glow-hover group flex flex-col sm:flex-row transition-all">
+                {/* Cover / Date Block */}
+                <div className={`w-full sm:w-44 h-32 sm:h-auto flex-col items-center justify-center bg-gradient-to-br ${gradient} shrink-0 flex relative border-b sm:border-b-0 sm:border-r border-border/30`}>
+                  <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
+                  <span className="text-xs font-bold text-muted-foreground tracking-widest">{dateStr}</span>
+                  <span className="text-3xl font-sora font-bold text-white mt-0.5">{dayStr.split(" ")[1] || "—"}</span>
+                  <span className="text-xs font-semibold text-muted-foreground">{dayStr.split(" ")[0] || "—"}</span>
+                </div>
+
+                {/* Details */}
+                <div className="p-5 flex-1 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-7 h-7 rounded-md bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                        {clubInitials}
+                      </div>
+                      <span className="text-sm text-muted-foreground font-medium">{clubName}</span>
                     </div>
-                    <span className="text-sm text-muted-foreground font-medium">{event.club}</span>
-                  </div>
 
-                  <h3 className="text-xl font-sora font-semibold text-white group-hover:text-indigo-400 transition-colors leading-tight">
-                    {event.title}
-                  </h3>
+                    <h3 className="text-xl font-sora font-semibold text-white group-hover:text-indigo-400 transition-colors leading-tight">
+                      {event.title}
+                    </h3>
 
-                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                    <span className="flex items-center gap-1.5">
-                      <MapPinIcon className="w-4 h-4" />
-                      {event.location}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <ClockIcon className="w-4 h-4" />
-                      {event.time}
-                    </span>
-                  </div>
+                    {event.description && (
+                      <p className="text-sm text-muted-foreground line-clamp-2">{event.description}</p>
+                    )}
+
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-muted-foreground pt-1">
+                      <span className="flex items-center gap-1.5">
+                        <MapPinIcon className="w-4 h-4" />
+                        {event.location}
+                      </span>
+                      <span className="flex items-center gap-1.5">
+                        <ClockIcon className="w-4 h-4" />
+                        {timeStr}
+                      </span>
+                    </div>
 
                   {/* RSVP avatars */}
                   <div className="flex items-center gap-2">
@@ -145,25 +149,25 @@ export default function EventsPage() {
                         </Avatar>
                       ))}
                     </div>
-                    <span className="text-xs text-muted-foreground font-medium">
-                      {event.rsvp} going
-                    </span>
+                      <span className="text-xs text-muted-foreground font-medium">
+                        {rsvpCount} going
+                      </span>
+                    </div>
                   </div>
-                </div>
 
-                <div className="mt-5 flex gap-3">
-                  <Button
-                    size="sm"
-                    onClick={() => toggleGoing(event.id)}
-                    className={`flex items-center gap-2 font-semibold h-10 px-5 rounded-xl transition-all ${
-                      isGoing
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
-                        : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
-                    }`}
-                  >
-                    {isGoing && <CheckIcon className="w-4 h-4" />}
-                    {isGoing ? `Going (${event.rsvp + 1})` : `Going (${event.rsvp})`}
-                  </Button>
+                  <div className="mt-5 flex gap-3">
+                    <Button
+                      size="sm"
+                      onClick={() => toggleGoing(event.event_id)}
+                      className={`flex items-center gap-2 font-semibold h-10 px-5 rounded-xl transition-all ${
+                        isGoing
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
+                          : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+                      }`}
+                    >
+                      {isGoing && <CheckIcon className="w-4 h-4" />}
+                      {isGoing ? `Going (${rsvpCount + 1})` : `Going (${rsvpCount})`}
+                    </Button>
                   <Button
                     size="sm"
                     variant="outline"
@@ -175,7 +179,8 @@ export default function EventsPage() {
               </div>
             </Card>
           );
-        })}
+        })
+        )}
       </div>
     </div>
   );
