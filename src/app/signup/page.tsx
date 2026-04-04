@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { LockIcon, EyeIcon, EyeOffIcon } from "lucide-react";
 import { useState } from "react";
 import { useUser } from "@/context/UserContext";
+import { apiFetch, setAuthToken } from "@/lib/apiClient";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -16,12 +17,39 @@ export default function SignupPage() {
   const { setName, setEmail: setGlobalEmail } = useUser();
   const [nameInput, setNameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setName(nameInput);
-    setGlobalEmail(emailInput);
-    router.push('/verify');
+    setErrorMsg("");
+    if (passwordInput !== confirmPasswordInput) {
+      setErrorMsg("Passwords do not match");
+      return;
+    }
+    
+    setIsLoading(true);
+    try {
+      const data = await apiFetch("/auth/signup", {
+        method: "POST",
+        body: JSON.stringify({
+          name: nameInput,
+          email: emailInput,
+          password: passwordInput,
+          // department and yearOfStudy can be handled here if added to the form later
+        }),
+      });
+      // Optionally store a session token if returned, but here we push to verify.
+      setName(nameInput);
+      setGlobalEmail(emailInput);
+      router.push('/verify');
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to sign up");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -43,6 +71,11 @@ export default function SignupPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {errorMsg && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg text-sm mb-4">
+              {errorMsg}
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
@@ -78,6 +111,8 @@ export default function SignupPage() {
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••" 
                   className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500 pr-10" 
+                  value={passwordInput}
+                  onChange={(e) => setPasswordInput(e.target.value)}
                   required 
                 />
                 <button 
@@ -92,11 +127,19 @@ export default function SignupPage() {
 
             <div className="space-y-2">
               <Label htmlFor="confirm-password">Confirm Password</Label>
-              <Input id="confirm-password" type={showPassword ? "text" : "password"} placeholder="••••••••" className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500" required />
+              <Input 
+                id="confirm-password" 
+                type={showPassword ? "text" : "password"} 
+                placeholder="••••••••" 
+                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500" 
+                value={confirmPasswordInput}
+                onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                required 
+              />
             </div>
 
-            <Button type="submit" className="w-full h-12 text-base font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl mt-6">
-              Create Account
+            <Button disabled={isLoading} type="submit" className="w-full h-12 text-base font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl mt-6">
+              {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
 

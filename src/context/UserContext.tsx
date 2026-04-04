@@ -37,27 +37,45 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const savedName = localStorage.getItem("hmu_name");
-    const savedEmail = localStorage.getItem("hmu_email");
     const savedInterests = localStorage.getItem("hmu_interests");
     const savedAiProfile = localStorage.getItem("hmu_ai_profile");
-    const savedIsLoggedIn = localStorage.getItem("hmu_is_logged_in");
-
-    if (savedName) setName(savedName);
-    if (savedEmail) setEmail(savedEmail);
+    
     if (savedInterests) setInterests(JSON.parse(savedInterests));
     if (savedAiProfile) setAiProfile(JSON.parse(savedAiProfile));
-    if (savedIsLoggedIn) setIsLoggedIn(savedIsLoggedIn === "true");
+
+    // Check token and fetch user
+    const checkUser = async () => {
+      const token = localStorage.getItem("hmu_token");
+      if (token) {
+        try {
+          const { apiFetch } = await import("@/lib/apiClient");
+          const data = await apiFetch("/auth/me");
+          if (data && data.user) {
+            setIsLoggedIn(true);
+            setEmail(data.user.email);
+            if (data.profile) {
+              setName(data.profile.name || "User");
+            }
+          } else {
+            setIsLoggedIn(false);
+          }
+        } catch (e) {
+          console.error("Failed to fetch user:", e);
+          setIsLoggedIn(false);
+        }
+      } else {
+        setIsLoggedIn(false);
+      }
+    };
+
+    checkUser();
   }, []);
 
   // Save to localStorage on change
   useEffect(() => {
-    localStorage.setItem("hmu_name", name);
-    localStorage.setItem("hmu_email", email);
     localStorage.setItem("hmu_interests", JSON.stringify(interests));
     if (aiProfile) localStorage.setItem("hmu_ai_profile", JSON.stringify(aiProfile));
-    localStorage.setItem("hmu_is_logged_in", isLoggedIn.toString());
-  }, [name, email, interests, aiProfile, isLoggedIn]);
+  }, [interests, aiProfile]);
 
   return (
     <UserContext.Provider value={{
