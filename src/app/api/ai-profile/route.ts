@@ -1,6 +1,8 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export async function POST(req: NextRequest) {
@@ -23,7 +25,7 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const prompt = `You are an intelligent campus matchmaking AI for a platform called HMU (Find Your People). 
+    const prompt = `You are an intelligent campus matchmaking AI for a platform called intrst (Find Your Actual People). 
 A college student has selected these interests: ${interests.join(", ")}.
 ${answers ? `They also answered these introspective questions:
 - Q: What's something most people don't know about you? A: ${answers.q1 || "not answered"}

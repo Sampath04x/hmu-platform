@@ -16,7 +16,7 @@ export default function UserProfilePage() {
   return (
     <div className="min-h-screen bg-background pb-28">
       {/* Cover */}
-      <div className="h-44 md:h-52 bg-gradient-to-br from-violet-600/40 via-indigo-600/30 to-rose-600/20 relative overflow-hidden">
+      <div className="h-44 md:h-52 bg-gradient-to-br from-brand/40 via-accent/30 to-brand/20 relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:20px_20px] opacity-20" />
         <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-background" />
       </div>
@@ -25,7 +25,7 @@ export default function UserProfilePage() {
       <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-16 flex flex-col items-center text-center">
         <div className="relative">
           <Avatar className={`w-28 h-28 border-4 border-background shadow-2xl ${!isConnected ? "blur-[8px]" : ""}`}>
-            <AvatarFallback className="bg-gradient-to-br from-violet-500 to-rose-600 text-white text-4xl font-sora font-bold">A</AvatarFallback>
+            <AvatarFallback className="bg-gradient-to-br from-brand to-accent text-white text-4xl font-dmserif font-bold">A</AvatarFallback>
           </Avatar>
           {!isConnected && (
             <div className="absolute inset-0 flex items-center justify-center rounded-full">
@@ -35,10 +35,10 @@ export default function UserProfilePage() {
         </div>
 
         <div className="mt-4 space-y-2">
-          <h1 className="text-3xl font-sora font-bold text-white">Arjun Kapoor</h1>
+          <h1 className="text-3xl font-dmserif font-bold text-white">Arjun Kapoor</h1>
           <div className="flex items-center justify-center gap-2 flex-wrap">
             <span className="text-muted-foreground font-medium">Mechanical · 2nd Year</span>
-            <Badge variant="outline" className="border-blue-500/30 text-blue-400 gap-1 rounded-full px-3">
+            <Badge variant="outline" className="border-brand/30 text-brand gap-1 rounded-full px-3">
               <CheckCircle2Icon className="w-3.5 h-3.5" /> Verified
             </Badge>
           </div>
@@ -49,17 +49,17 @@ export default function UserProfilePage() {
 
         {/* Shared interests highlight */}
         {sharedInterests.length > 0 && (
-          <div className="mt-4 flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-full">
-            <span className="text-sm text-indigo-400 font-medium">You both like:</span>
+          <div className="mt-4 flex items-center gap-2 bg-brand/10 border border-brand/20 px-4 py-2 rounded-full">
+            <span className="text-sm text-brand font-medium">You both like:</span>
             {sharedInterests.map((tag) => (
-              <span key={tag} className="text-sm text-indigo-300 font-semibold">{tag}</span>
+              <span key={tag} className="text-sm text-accent font-semibold">{tag}</span>
             ))}
           </div>
         )}
 
         {/* Shared club highlight */}
         <div className="mt-3 text-xs text-muted-foreground flex items-center gap-1.5">
-          <div className="w-5 h-5 rounded bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-[9px]">PC</div>
+          <div className="w-5 h-5 rounded bg-brand/20 flex items-center justify-center text-brand font-bold text-[9px]">PC</div>
           You&apos;re both in: Photography Club
         </div>
 
@@ -70,8 +70,8 @@ export default function UserProfilePage() {
               key={tag}
               className={`rounded-full px-3 py-1 text-xs font-medium border ${
                 sharedInterests.includes(tag)
-                  ? "bg-violet-500/15 text-violet-300 border-violet-500/30"
-                  : "bg-indigo-500/10 text-indigo-400/70 border-indigo-500/10"
+                  ? "bg-accent/15 text-accent border-accent/30"
+                  : "bg-brand/10 text-brand/70 border-brand/10"
               }`}
             >
               {tag}
@@ -81,17 +81,17 @@ export default function UserProfilePage() {
 
         {/* CTA Buttons */}
         <div className="flex gap-3 mt-7 w-full max-w-sm">
-          <Button className="flex-1 h-12 bg-indigo-500 hover:bg-indigo-600 text-white font-semibold rounded-xl shadow-[0_0_15px_rgba(99,102,241,0.3)] gap-2">
+          <Button className="flex-1 h-12 bg-brand hover:opacity-90 text-white font-semibold rounded-xl shadow-[0_0_15px_rgba(194,105,42,0.3)] gap-2">
             <UserPlusIcon className="w-4 h-4" /> Connect
           </Button>
-          <Button variant="outline" className="flex-1 h-12 border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 rounded-xl gap-2 group">
+          <Button variant="outline" className="flex-1 h-12 border-brand/30 text-brand hover:bg-brand/10 rounded-xl gap-2 group">
             {isConnected ? (
               <>
                 <MessageSquareIcon className="w-4 h-4" /> Message
               </>
             ) : (
               <>
-                <LockIcon className="w-4 h-4 group-hover:text-indigo-300 transition-colors" />
+                <LockIcon className="w-4 h-4 group-hover:text-accent transition-colors" />
                 <span className="text-sm">Request to Message</span>
               </>
             )}
@@ -106,7 +106,7 @@ export default function UserProfilePage() {
             { label: "Events", value: "4" },
           ].map((stat) => (
             <div key={stat.label} className="bg-card border border-border/50 rounded-2xl py-4 px-2 text-center">
-              <div className="text-2xl font-sora font-bold text-white">{stat.value}</div>
+              <div className="text-2xl font-dmserif font-bold text-white">{stat.value}</div>
               <div className="text-xs text-muted-foreground mt-1">{stat.label}</div>
             </div>
           ))}
@@ -118,7 +118,7 @@ export default function UserProfilePage() {
         <Tabs defaultValue="posts">
           <TabsList className="w-full bg-card border border-border/50 rounded-xl p-1 h-auto gap-1">
             {["posts", "connections", "clubs"].map((t) => (
-              <TabsTrigger key={t} value={t} className="flex-1 capitalize rounded-lg py-2 text-sm data-[state=active]:bg-indigo-500 data-[state=active]:text-white data-[state=active]:shadow-none text-muted-foreground hover:text-white transition-colors">
+              <TabsTrigger key={t} value={t} className="flex-1 capitalize rounded-lg py-2 text-sm data-[state=active]:bg-brand data-[state=active]:text-white data-[state=active]:shadow-none text-muted-foreground hover:text-white transition-colors">
                 {t}
               </TabsTrigger>
             ))}
@@ -130,13 +130,13 @@ export default function UserProfilePage() {
               { tag: "QUESTION", content: "Does anyone actually use the library or is it just for the photos?" },
             ].map((post, i) => (
               <Card key={i} className="p-5 bg-card border-border/50 glow-hover">
-                <Badge className="mb-3 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20" variant="outline">{post.tag}</Badge>
+                <Badge className="mb-3 rounded-full bg-accent/10 text-accent border border-accent/20" variant="outline">{post.tag}</Badge>
                 <p className="text-foreground leading-relaxed mb-4">{post.content}</p>
                 <div className="flex items-center gap-5 text-muted-foreground text-sm">
-                  <button className="flex items-center gap-1.5 hover:text-indigo-400 transition-colors">
+                  <button className="flex items-center gap-1.5 hover:text-brand transition-colors">
                     <ThumbsUpIcon className="w-4 h-4" /> 128
                   </button>
-                  <button className="flex items-center gap-1.5 hover:text-violet-400 transition-colors">
+                  <button className="flex items-center gap-1.5 hover:text-accent transition-colors">
                     <MessageCircleIcon className="w-4 h-4" /> 67
                   </button>
                 </div>
@@ -147,8 +147,8 @@ export default function UserProfilePage() {
           <TabsContent value="connections" className="mt-6">
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-4">
               {["Riya M.", "Ananya S.", "Karthik R."].map((name, i) => (
-                <div key={i} className="flex flex-col items-center gap-2 p-4 bg-card border border-border/50 rounded-2xl hover:border-indigo-500/30 transition-colors cursor-pointer group">
-                  <Avatar className="w-14 h-14 border border-border group-hover:border-indigo-500/40 transition-colors">
+                <div key={i} className="flex flex-col items-center gap-2 p-4 bg-card border border-border/50 rounded-2xl hover:border-brand/30 transition-colors cursor-pointer group">
+                  <Avatar className="w-14 h-14 border border-border group-hover:border-brand/40 transition-colors">
                     <AvatarFallback className="bg-muted text-foreground font-bold">{name[0]}</AvatarFallback>
                   </Avatar>
                   <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-white transition-colors">{name}</span>
@@ -160,7 +160,7 @@ export default function UserProfilePage() {
           <TabsContent value="clubs" className="mt-6 space-y-3">
             {["Photography Club", "Debate Union"].map((club, i) => (
               <Card key={i} className="p-4 bg-card border-border/50 flex items-center gap-4 glow-hover">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 text-white font-bold text-lg flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-brand to-accent text-white font-bold text-lg flex items-center justify-center">
                   {club[0]}
                 </div>
                 <div>

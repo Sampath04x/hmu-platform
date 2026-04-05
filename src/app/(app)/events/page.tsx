@@ -17,15 +17,15 @@ const fallbackEvents = [
     location: "Main Gate",
     rsvp: 34,
     going: false,
-    gradient: "from-violet-500/20 to-indigo-500/10",
+    gradient: "from-brand/20 to-accent/10",
   }
 ];
 
 const gradients = [
-  "from-violet-500/20 to-indigo-500/10",
-  "from-amber-500/20 to-orange-500/10",
-  "from-rose-500/20 to-pink-500/10",
-  "from-emerald-500/20 to-teal-500/10"
+  "from-brand/20 to-accent/10",
+  "from-amber-600/20 to-orange-500/10",
+  "from-rose-600/20 to-pink-500/10",
+  "from-emerald-600/20 to-teal-500/10"
 ];
 
 function formatDate(isoString: string) {
@@ -67,7 +67,7 @@ export default function EventsPage() {
   return (
     <div className="min-h-screen bg-background pb-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-sora font-semibold text-white mb-1">What&apos;s Happening</h1>
+        <h1 className="text-3xl font-dmserif font-semibold text-white mb-1">What&apos;s Happening</h1>
         <p className="text-muted-foreground">Events across your campus.</p>
       </div>
 
@@ -79,7 +79,7 @@ export default function EventsPage() {
             onClick={() => setActiveFilter(f)}
             className={`px-5 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
               activeFilter === f
-                ? "bg-indigo-500 text-white shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                ? "bg-brand text-white shadow-[0_0_15px_rgba(194,105,42,0.3)]"
                 : "bg-card border border-border text-muted-foreground hover:text-white hover:border-muted-foreground"
             }`}
           >
@@ -107,7 +107,7 @@ export default function EventsPage() {
                 <div className={`w-full sm:w-44 h-32 sm:h-auto flex-col items-center justify-center bg-gradient-to-br ${gradient} shrink-0 flex relative border-b sm:border-b-0 sm:border-r border-border/30`}>
                   <div className="absolute inset-0 bg-[radial-gradient(#ffffff22_1px,transparent_1px)] [background-size:16px_16px] opacity-30 pointer-events-none" />
                   <span className="text-xs font-bold text-muted-foreground tracking-widest">{dateStr}</span>
-                  <span className="text-3xl font-sora font-bold text-white mt-0.5">{dayStr.split(" ")[1] || "—"}</span>
+                  <span className="text-3xl font-dmserif font-bold text-white mt-0.5">{dayStr.split(" ")[1] || "—"}</span>
                   <span className="text-xs font-semibold text-muted-foreground">{dayStr.split(" ")[0] || "—"}</span>
                 </div>
 
@@ -115,13 +115,13 @@ export default function EventsPage() {
                 <div className="p-5 flex-1 flex flex-col justify-between">
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-md bg-gradient-to-br from-indigo-500 to-violet-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-md bg-gradient-to-br from-brand to-accent text-white font-bold text-xs flex items-center justify-center shrink-0">
                         {clubInitials}
                       </div>
                       <span className="text-sm text-muted-foreground font-medium">{clubName}</span>
                     </div>
 
-                    <h3 className="text-xl font-sora font-semibold text-white group-hover:text-indigo-400 transition-colors leading-tight">
+                    <h3 className="text-xl font-dmserif font-semibold text-white group-hover:text-brand transition-colors leading-tight">
                       {event.title}
                     </h3>
 
@@ -161,8 +161,8 @@ export default function EventsPage() {
                       onClick={() => toggleGoing(event.event_id)}
                       className={`flex items-center gap-2 font-semibold h-10 px-5 rounded-xl transition-all ${
                         isGoing
-                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30"
-                          : "bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_0_10px_rgba(99,102,241,0.3)]"
+                          ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-danger/10 hover:text-danger hover:border-danger/30"
+                          : "bg-brand hover:opacity-90 text-white shadow-[0_0_10px_rgba(194,105,42,0.3)]"
                       }`}
                     >
                       {isGoing && <CheckIcon className="w-4 h-4" />}

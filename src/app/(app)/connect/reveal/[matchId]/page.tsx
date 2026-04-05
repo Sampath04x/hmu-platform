@@ -26,7 +26,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
         <div className="flex flex-col items-center text-center gap-8 max-w-sm w-full animate-in fade-in slide-in-from-bottom-4 duration-500">
           {/* Pulsing avatar */}
           <div className="relative">
-            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)]">
+            <div className="w-32 h-32 rounded-full bg-gradient-to-br from-brand to-accent flex items-center justify-center shadow-[0_0_50px_rgba(99,102,241,0.5)]">
               <svg viewBox="0 0 60 60" className="w-20 h-20 fill-white/30">
                 <polygon points="30,5 55,50 5,50" />
                 <circle cx="30" cy="30" r="12" className="fill-white/20" />
@@ -37,7 +37,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
           </div>
 
           <div className="space-y-2">
-            <div className="text-3xl font-sora font-bold text-white">Ember</div>
+            <div className="text-3xl font-dmserif font-bold text-white">Ember</div>
             <p className="text-xl text-muted-foreground font-medium">wants to reveal.</p>
             <p className="text-sm text-muted-foreground/70 leading-relaxed mt-4">
               Once you both accept, you&apos;ll see each other.<br />This can&apos;t be undone.
@@ -47,7 +47,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
           <div className="w-full space-y-3 mt-2">
             <Button
               onClick={() => setRevealed(true)}
-              className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all hover:shadow-[0_0_40px_rgba(99,102,241,0.6)]"
+              className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-brand to-accent hover:from-brand hover:to-accent text-white shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all hover:shadow-[0_0_40px_rgba(99,102,241,0.6)]"
             >
               Yes, reveal 🔥
             </Button>
@@ -89,7 +89,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
           {/* Revealed Profile Photo */}
           <div className="relative">
             <Avatar className="w-36 h-36 border-4 border-indigo-500/50 shadow-[0_0_50px_rgba(99,102,241,0.4)]">
-              <AvatarFallback className="bg-gradient-to-br from-indigo-500 to-violet-600 text-white text-5xl font-sora font-bold">
+              <AvatarFallback className="bg-gradient-to-br from-brand to-accent text-white text-5xl font-dmserif font-bold">
                 P
               </AvatarFallback>
             </Avatar>
@@ -99,7 +99,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
           </div>
 
           <div className="space-y-1">
-            <h2 className="text-3xl font-sora font-bold text-white">Priya Sharma</h2>
+            <h2 className="text-3xl font-dmserif font-bold text-white">Priya Sharma</h2>
             <p className="text-muted-foreground font-medium">ECE &middot; 3rd Year</p>
             <div className="flex items-center justify-center gap-1.5 mt-2">
               <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full" />
@@ -107,8 +107,8 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
             </div>
           </div>
 
-          <div className="bg-indigo-500/10 border border-indigo-500/20 rounded-2xl p-5 space-y-1">
-            <p className="text-xl font-sora font-semibold text-white">
+          <div className="bg-brand/10 border border-indigo-500/20 rounded-2xl p-5 space-y-1">
+            <p className="text-xl font-dmserif font-semibold text-white">
               You matched with someone real.
             </p>
             <p className="text-sm text-muted-foreground">
@@ -117,7 +117,7 @@ export default function RevealPage({ params }: { params: { matchId: string } }) 
           </div>
 
           <Link href="/profile/arjun-k" className="w-full">
-            <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-indigo-500 hover:bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all">
+            <Button className="w-full h-14 text-lg font-semibold rounded-2xl bg-brand hover:bg-indigo-600 text-white shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all">
               View Full Profile →
             </Button>
           </Link>

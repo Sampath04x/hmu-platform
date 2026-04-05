@@ -4,20 +4,20 @@ export const getApiUrl = () => {
 
 export const getAuthToken = () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('hmu_token');
+    return localStorage.getItem('intrst_token');
   }
   return null;
 };
 
 export const setAuthToken = (token: string) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem('hmu_token', token);
+    localStorage.setItem('intrst_token', token);
   }
 };
 
 export const removeAuthToken = () => {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem('hmu_token');
+    localStorage.removeItem('intrst_token');
   }
 };
 

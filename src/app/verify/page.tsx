@@ -89,11 +89,11 @@ export default function VerifyPage() {
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
       <Card className="w-full max-w-md bg-card/50 backdrop-blur-sm border-border glow-hover">
         <CardHeader className="text-center space-y-4 pt-8">
-          <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 flex items-center justify-center mx-auto border border-indigo-500/20">
-            <LockKeyholeIcon className="w-8 h-8 text-indigo-400" />
+          <div className="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center mx-auto border border-brand/20">
+            <LockKeyholeIcon className="w-8 h-8 text-brand" />
           </div>
           <div>
-            <CardTitle className="text-3xl font-sora font-bold mb-2">Check Your Email</CardTitle>
+            <CardTitle className="text-3xl font-dmserif font-bold mb-2">Check Your Email</CardTitle>
             <CardDescription className="text-base text-muted-foreground">
               We sent a 6-digit code to <span className="text-white font-medium">{email || "your email"}</span>
             </CardDescription>
@@ -118,12 +118,12 @@ export default function VerifyPage() {
                   onChange={(e) => handleChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
                   onPaste={handlePaste}
-                  className="w-10 h-14 sm:w-12 sm:h-16 text-center text-2xl font-sora font-semibold bg-background border border-border rounded-xl focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-10 h-14 sm:w-12 sm:h-16 text-center text-2xl font-dmserif font-semibold bg-background border border-border rounded-xl focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
                 />
               ))}
             </div>
 
-            <Button type="submit" className="w-full h-14 text-lg font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl" disabled={otp.join("").length !== 6 || isLoading}>
+            <Button type="submit" className="w-full h-14 text-lg font-semibold bg-brand hover:opacity-90 rounded-xl" disabled={otp.join("").length !== 6 || isLoading}>
               {isLoading ? "Verifying..." : "Verify Email"}
             </Button>
           </form>
@@ -131,10 +131,10 @@ export default function VerifyPage() {
         <CardFooter className="flex flex-col items-center gap-2 pb-8">
           {timer > 0 ? (
             <p className="text-sm text-muted-foreground">
-              Resend code in <span className="text-indigo-400 font-mono">{timer}s</span>
+              Resend code in <span className="text-brand font-mono">{timer}s</span>
             </p>
           ) : (
-            <Button variant="ghost" className="text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10" onClick={() => setTimer(60)}>
+            <Button variant="ghost" className="text-brand hover:text-accent hover:bg-brand/10" onClick={() => setTimer(60)}>
               Resend code
             </Button>
           )}

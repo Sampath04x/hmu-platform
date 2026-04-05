@@ -1,29 +1,8 @@
 import express from "express";
 import supabase from "../config/supabase.js";
+import { verifyAuth } from "../utils/auth.js";
 
 const router = express.Router();
-
-// Middleware to verify authentication
-const verifyAuth = async (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) {
-    return res.status(401).json({ error: "Authorization header missing" });
-  }
-
-  try {
-    const token = authHeader.replace("Bearer ", "");
-    const { data, error } = await supabase.auth.getUser(token);
-
-    if (error || !data.user) {
-      return res.status(401).json({ error: "Unauthorized" });
-    }
-
-    req.user = data.user;
-    next();
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 // GET user profile by ID
 router.get("/:userId", async (req, res) => {
@@ -116,6 +95,34 @@ router.put("/:userId", verifyAuth, async (req, res) => {
       message: "Profile updated successfully",
       user: data[0],
     });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// SAVE personality responses
+router.post("/:userId/personality", verifyAuth, async (req, res) => {
+  const { userId } = req.params;
+  const { responses } = req.body; // e.g. { q1: 'Introvert', q2: 'Practical' }
+
+  if (req.user.id !== userId) {
+    return res.status(403).json({ error: "Access denied" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({
+        personality_responses: responses,
+        has_completed_personality: true
+      })
+      .eq("user_id", userId)
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+
+    res.json({ message: "Character profile built!", profile: data });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

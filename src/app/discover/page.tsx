@@ -40,7 +40,7 @@ const INTEREST_GROUPS = [
 function TeaserSkeleton() {
   return (
     <div className="space-y-4 animate-pulse">
-      <div className="h-8 bg-indigo-500/10 rounded-full w-2/3 mx-auto" />
+      <div className="h-8 bg-brand/10 rounded-full w-2/3 mx-auto" />
       <div className="h-4 bg-white/5 rounded-full w-full" />
       <div className="h-4 bg-white/5 rounded-full w-4/5 mx-auto" />
       <div className="grid grid-cols-3 gap-3 mt-4">
@@ -121,18 +121,18 @@ export default function DiscoverPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07070E] flex flex-col relative overflow-hidden">
+    <div className="min-h-screen bg-[#0F0C0A] flex flex-col relative overflow-hidden">
       {/* Ambient background */}
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(99,102,241,0.12)_0%,transparent_60%)] pointer-events-none" />
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,rgba(139,92,246,0.08)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_20%_20%,rgba(194,105,42,0.12)_0%,transparent_60%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_80%_80%,rgba(232,168,124,0.08)_0%,transparent_60%)] pointer-events-none" />
 
       {/* Nav */}
       <header className="flex justify-between items-center px-6 py-5 z-10">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-8 h-8 rounded-lg bg-indigo-500 flex items-center justify-center font-sora font-bold text-white text-xs tracking-widest group-hover:scale-105 transition-transform">
-            HMU
+          <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center font-dmserif font-bold text-white text-xs tracking-widest group-hover:scale-105 transition-transform">
+            intrst
           </div>
-          <span className="font-sora font-semibold text-white">HMU</span>
+          <span className="font-dmserif font-semibold text-white">intrst</span>
         </Link>
         <Link href="/signup" className="text-sm text-muted-foreground hover:text-white transition-colors">
           Skip →
@@ -146,12 +146,12 @@ export default function DiscoverPage() {
           {step === "interests" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-3">
-                <div className="inline-flex items-center gap-2 bg-indigo-500/10 border border-indigo-500/20 px-4 py-2 rounded-full text-indigo-400 text-xs font-semibold tracking-wider mb-2">
+                <div className="inline-flex items-center gap-2 bg-brand/10 border border-brand/20 px-4 py-2 rounded-full text-brand text-xs font-semibold tracking-wider mb-2">
                   <SparkleIcon className="w-3.5 h-3.5" />
                   DISCOVER YOUR PEOPLE
                 </div>
-                <h1 className="text-4xl sm:text-5xl font-sora font-bold text-white leading-tight">
-                  What makes you, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-400">you?</span>
+                <h1 className="text-4xl sm:text-5xl font-dmserif font-bold text-white leading-tight">
+                  What makes you, <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-accent">you?</span>
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-md mx-auto">
                   Pick everything that resonates. Our AI uses this to build your match profile — before you even sign up.
@@ -174,7 +174,7 @@ export default function DiscoverPage() {
                             onClick={() => toggle(item)}
                             className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 border ${
                               isSelected
-                                ? "bg-indigo-500/20 text-indigo-300 border-indigo-500/60 shadow-[0_0_12px_rgba(99,102,241,0.25)]"
+                                ? "bg-brand/20 text-accent border-brand/60 shadow-[0_0_12px_rgba(194,105,42,0.25)]"
                                 : "bg-white/[0.03] border-white/[0.08] text-muted-foreground hover:border-white/20 hover:text-white"
                             }`}
                           >
@@ -198,7 +198,7 @@ export default function DiscoverPage() {
                   <Button
                     onClick={handleNext}
                     disabled={selected.length < 3}
-                    className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-40 text-white font-semibold rounded-xl px-6 gap-2 shadow-[0_0_20px_rgba(99,102,241,0.3)]"
+                    className="bg-brand hover:opacity-90 disabled:opacity-40 text-white font-semibold rounded-xl px-6 gap-2 shadow-[0_0_20px_rgba(194,105,42,0.3)]"
                   >
                     Continue <ArrowRightIcon className="w-4 h-4" />
                   </Button>
@@ -211,11 +211,11 @@ export default function DiscoverPage() {
           {step === "questions" && (
             <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="text-center space-y-3">
-                <div className="inline-flex items-center gap-2 bg-violet-500/10 border border-violet-500/20 px-4 py-2 rounded-full text-violet-400 text-xs font-semibold tracking-wider mb-2">
+                <div className="inline-flex items-center gap-2 bg-accent/10 border border-accent/20 px-4 py-2 rounded-full text-accent text-xs font-semibold tracking-wider mb-2">
                   <BrainIcon className="w-3.5 h-3.5" />
                   3 QUICK ONES
                 </div>
-                <h1 className="text-4xl font-sora font-bold text-white">
+                <h1 className="text-4xl font-dmserif font-bold text-white">
                   Tell us a little more.
                 </h1>
                 <p className="text-lg text-muted-foreground max-w-md mx-auto">
@@ -242,13 +242,14 @@ export default function DiscoverPage() {
                   },
                 ].map(({ key, q, hint }) => (
                   <div key={key} className="space-y-2">
-                    <label className="text-sm font-semibold text-indigo-100">{q}</label>
+                    <label className="text-sm font-semibold text-accent/90">{q}</label>
+                    <button className="hidden" /> {/* wrapper */}
                     <Textarea
                       placeholder={hint}
                       value={answers[key]}
                       onChange={(e) => setAnswers(prev => ({ ...prev, [key]: e.target.value }))}
                       maxLength={200}
-                      className="min-h-[90px] bg-white/[0.04] border-white/[0.08] focus-visible:border-indigo-500/50 focus-visible:ring-indigo-500/20 text-white placeholder:text-muted-foreground/50 resize-none rounded-xl text-sm"
+                      className="min-h-[90px] bg-white/[0.04] border-white/[0.08] focus-visible:border-brand/50 focus-visible:ring-brand/20 text-white placeholder:text-muted-foreground/50 resize-none rounded-xl text-sm"
                     />
                     <p className="text-xs text-right text-muted-foreground/50">{answers[key].length}/200</p>
                   </div>
@@ -265,7 +266,7 @@ export default function DiscoverPage() {
                 </Button>
                 <Button
                   onClick={handleNext}
-                  className="flex-1 h-12 bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white font-semibold rounded-xl gap-2 shadow-[0_0_25px_rgba(99,102,241,0.35)]"
+                  className="flex-1 h-12 bg-gradient-to-r from-brand to-accent hover:opacity-90 text-white font-semibold rounded-xl gap-2 shadow-[0_0_25px_rgba(194,105,42,0.35)]"
                 >
                   <ZapIcon className="w-4 h-4" />
                   Analyse My Vibe
@@ -282,7 +283,7 @@ export default function DiscoverPage() {
                   <SparkleIcon className="w-3.5 h-3.5" />
                   {loading ? "AI IS THINKING..." : "YOUR VIBE PROFILE"}
                 </div>
-                <h1 className="text-4xl font-sora font-bold text-white">
+                <h1 className="text-4xl font-dmserif font-bold text-white">
                   {loading ? "Crunching your personality..." : "Here's what the AI sees."}
                 </h1>
                 {!loading && (
@@ -303,24 +304,24 @@ export default function DiscoverPage() {
                   )}
 
                   {/* Personality Type + Codename */}
-                  <Card className="bg-gradient-to-br from-indigo-950/60 via-[#0d0d20] to-violet-950/40 border border-indigo-500/25 rounded-3xl overflow-hidden relative">
-                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-indigo-500/50 to-transparent" />
+                  <Card className="bg-gradient-to-br from-brand/20 via-[#120F0D] to-accent/10 border border-brand/25 rounded-3xl overflow-hidden relative shadow-2xl">
+                    <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent" />
                     <div className="p-7 text-center space-y-4">
                       {/* Anonymous avatar */}
-                      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shadow-[0_0_30px_rgba(99,102,241,0.4)]">
+                      <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-br from-brand to-accent flex items-center justify-center shadow-[0_0_30px_rgba(194,105,42,0.4)]">
                         <svg viewBox="0 0 50 50" className="w-12 h-12 fill-white/30">
                           <polygon points="25,4 48,43 2,43" />
                           <circle cx="25" cy="25" r="9" className="fill-white/20" />
                         </svg>
                       </div>
                       <div>
-                        <div className="text-sm text-indigo-400 font-semibold uppercase tracking-widest mb-1">
+                        <div className="text-sm text-brand font-semibold uppercase tracking-widest mb-1">
                           Your Match Codename
                         </div>
-                        <div className="text-4xl font-sora font-bold text-white">{aiProfile.matchCodename}</div>
+                        <div className="text-4xl font-dmserif font-bold text-white">{aiProfile.matchCodename}</div>
                       </div>
                       <div className="bg-white/[0.04] border border-white/[0.07] rounded-2xl px-5 py-4">
-                        <div className="text-xl font-sora font-semibold text-indigo-300 mb-1">{aiProfile.personalityType}</div>
+                        <div className="text-xl font-dmserif font-semibold text-accent mb-1">{aiProfile.personalityType}</div>
                         <p className="text-muted-foreground text-sm leading-relaxed">{aiProfile.vibe}</p>
                       </div>
                     </div>
@@ -351,19 +352,19 @@ export default function DiscoverPage() {
                   {/* Compatible with */}
                   <Card className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-5 space-y-3">
                     <div className="flex items-center gap-2">
-                      <SparkleIcon className="w-4 h-4 text-indigo-400" />
+                      <SparkleIcon className="w-4 h-4 text-brand" />
                       <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">You&apos;ll click over</span>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {aiProfile.compatibleWith.map((c, i) => (
-                        <span key={i} className="text-sm bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1.5 rounded-full font-medium">{c}</span>
+                        <span key={i} className="text-sm bg-brand/10 text-brand border border-brand/20 px-3 py-1.5 rounded-full font-medium">{c}</span>
                       ))}
                     </div>
                   </Card>
-
+ 
                   {/* Icebreaker */}
-                  <Card className="bg-gradient-to-r from-violet-500/10 to-indigo-500/5 border border-violet-500/20 rounded-2xl p-5 space-y-2">
-                    <div className="text-xs font-bold text-violet-400 uppercase tracking-widest">Your AI Icebreaker</div>
+                  <Card className="bg-gradient-to-r from-brand/10 to-accent/5 border border-brand/20 rounded-2xl p-5 space-y-2">
+                    <div className="text-xs font-bold text-brand uppercase tracking-widest">Your AI Icebreaker</div>
                     <p className="text-white text-base italic leading-relaxed">&ldquo;{aiProfile.icebreaker}&rdquo;</p>
                     <p className="text-xs text-muted-foreground">This is how your anonymous match will open the conversation.</p>
                   </Card>
@@ -381,7 +382,7 @@ export default function DiscoverPage() {
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {selected.map(tag => (
-                        <span key={tag} className="text-xs bg-indigo-500/10 text-indigo-400/80 border border-indigo-500/15 px-3 py-1 rounded-full">
+                        <span key={tag} className="text-xs bg-brand/10 text-brand/80 border border-brand/15 px-3 py-1 rounded-full">
                           {tag}
                         </span>
                       ))}
@@ -392,9 +393,9 @@ export default function DiscoverPage() {
                   <div className="space-y-3 pt-2">
                     <Button
                       onClick={proceed}
-                      className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 hover:from-indigo-400 hover:to-violet-500 text-white shadow-[0_0_30px_rgba(99,102,241,0.4)] transition-all"
+                      className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-brand to-accent hover:opacity-90 text-white shadow-[0_0_30px_rgba(194,105,42,0.4)] transition-all"
                     >
-                      Claim My Spot on HMU →
+                      Claim My Spot on intrst →
                     </Button>
                     <p className="text-xs text-center text-muted-foreground/60">
                       Your profile will be pre-filled with these interests. Verified students only.

@@ -18,7 +18,7 @@ function GeometricAvatar({ size = "sm" }: { size?: "sm" | "md" | "lg" }) {
   const sizeMap = { sm: "w-9 h-9", md: "w-12 h-12", lg: "w-20 h-20" };
   const innerMap = { sm: "w-5 h-5", md: "w-7 h-7", lg: "w-12 h-12" };
   return (
-    <div className={`${sizeMap[size]} rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.4)]`}>
+    <div className={`${sizeMap[size]} rounded-full bg-gradient-to-br from-brand to-accent flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(99,102,241,0.4)]`}>
       <svg viewBox="0 0 40 40" className={`${innerMap[size]} fill-white/30`}>
         <polygon points="20,3 37,34 3,34" />
         <circle cx="20" cy="20" r="7" className="fill-white/15" />
@@ -65,10 +65,10 @@ export default function MatchPage() {
         <div className="flex flex-col items-center gap-1">
           <GeometricAvatar size="md" />
           <div className="flex items-center gap-1.5">
-            <span className="text-sm font-sora font-semibold text-white">Ember</span>
-            <div className="flex items-center gap-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full px-2 py-0.5">
-              <ShieldIcon className="w-2.5 h-2.5 text-indigo-400" />
-              <span className="text-[10px] text-indigo-400 font-semibold">Anonymous</span>
+            <span className="text-sm font-dmserif font-semibold text-white">Ember</span>
+            <div className="flex items-center gap-1 bg-brand/10 border border-indigo-500/20 rounded-full px-2 py-0.5">
+              <ShieldIcon className="w-2.5 h-2.5 text-brand" />
+              <span className="text-[10px] text-brand font-semibold">Anonymous</span>
             </div>
           </div>
         </div>
@@ -80,7 +80,7 @@ export default function MatchPage() {
 
       {/* Shared interest + anonymity disclaimer */}
       <div className="flex flex-col items-center gap-2 pt-3 pb-1 relative z-20 shrink-0 md:ml-[80px] lg:ml-[240px]">
-        <span className="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
+        <span className="text-xs bg-brand/10 text-brand border border-indigo-500/20 px-3 py-1 rounded-full font-medium">
           📷 Both into Photography
         </span>
         <span className="text-[11px] text-muted-foreground/50">
@@ -98,7 +98,7 @@ export default function MatchPage() {
               <div
                 className={`px-4 py-3 rounded-2xl flex items-center gap-3 shadow-lg ${
                   msg.own
-                    ? "bg-indigo-500 rounded-tr-sm shadow-[0_0_15px_rgba(99,102,241,0.3)]"
+                    ? "bg-brand rounded-tr-sm shadow-[0_0_15px_rgba(99,102,241,0.3)]"
                     : "bg-white/[0.06] border border-white/[0.08] rounded-tl-sm"
                 }`}
               >
@@ -124,14 +124,14 @@ export default function MatchPage() {
               <div className={`flex items-center gap-2 px-1 ${msg.own ? "flex-row-reverse" : "flex-row"}`}>
                 <span className="text-[11px] text-muted-foreground/50">{msg.timestamp}</span>
                 {msg.own && msg.heard && (
-                  <span className="text-[11px] text-indigo-400 font-medium">Heard ✓</span>
+                  <span className="text-[11px] text-brand font-medium">Heard ✓</span>
                 )}
               </div>
             </div>
 
             {/* Self side: show a blurred circle (no real photo) */}
             {msg.own && (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500/30 to-rose-500/20 flex items-center justify-center shrink-0 border border-white/10 text-white/50 text-xs font-bold">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-brand/30 to-rose-500/20 flex items-center justify-center shrink-0 border border-white/10 text-white/50 text-xs font-bold">
                 {name?.[0] || 'U'}
               </div>
             )}
@@ -144,7 +144,7 @@ export default function MatchPage() {
         {/* Reveal button if ≥5 exchanges */}
         {exchangeCount >= 5 && (
           <Link href="/connect/reveal/match-ember">
-            <button className="w-full mb-3 py-3 rounded-2xl bg-gradient-to-r from-indigo-500 to-violet-600 text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] transition-all">
+            <button className="w-full mb-3 py-3 rounded-2xl bg-gradient-to-r from-brand to-accent text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] transition-all">
               <SparkleIcon className="w-4 h-4" />
               Ready to reveal? · 5 exchanges done
             </button>
@@ -157,7 +157,7 @@ export default function MatchPage() {
           className="w-full flex items-center justify-between bg-white/[0.04] border border-white/[0.07] rounded-xl px-4 py-2.5 mb-3 hover:bg-white/[0.07] transition-colors"
         >
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <SparkleIcon className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+            <SparkleIcon className="w-3.5 h-3.5 text-brand shrink-0" />
             <span className="text-xs text-muted-foreground font-medium truncate">
               {promptExpanded
                 ? "What's something you're genuinely good at that nobody knows about?"
@@ -184,7 +184,7 @@ export default function MatchPage() {
                 className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-150 select-none ${
                   isRecording
                     ? "bg-rose-500 scale-110 shadow-[0_0_30px_rgba(239,68,68,0.5)]"
-                    : "bg-indigo-500 shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:bg-indigo-400 active:scale-95"
+                    : "bg-brand shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:bg-indigo-400 active:scale-95"
                 }`}
               >
                 <MicIcon className="w-7 h-7 text-white" />

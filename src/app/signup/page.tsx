@@ -14,13 +14,19 @@ import { apiFetch, setAuthToken } from "@/lib/apiClient";
 export default function SignupPage() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
-  const { setName, setEmail: setGlobalEmail } = useUser();
+  const { setName, setEmail: setGlobalEmail, interests, aiProfile } = useUser();
   const [nameInput, setNameInput] = useState("");
+  const [usernameInput, setUsernameInput] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [passwordInput, setPasswordInput] = useState("");
   const [confirmPasswordInput, setConfirmPasswordInput] = useState("");
+  const [phoneInput, setPhoneInput] = useState("");
+  const [clubDescription, setClubDescription] = useState("");
+  const [authorizedPerson, setAuthorizedPerson] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  const isClubEmail = emailInput.toLowerCase().endsWith("_vsp@gitam.in");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,22 +38,42 @@ export default function SignupPage() {
     
     setIsLoading(true);
     try {
-      const data = await apiFetch("/auth/signup", {
+      const payload: any = {
+        name: nameInput,
+        username: usernameInput.toLowerCase().trim(),
+        email: emailInput,
+        password: passwordInput,
+        interests: interests,
+        aiProfile: aiProfile,
+        phone: phoneInput || null,
+      };
+
+      if (isClubEmail) {
+        payload.club_details = {
+          description: clubDescription,
+          authorized_person: authorizedPerson,
+          requested_at: new Date().toISOString(),
+        };
+      }
+
+      await apiFetch("/auth/signup", {
         method: "POST",
-        body: JSON.stringify({
-          name: nameInput,
-          email: emailInput,
-          password: passwordInput,
-          // department and yearOfStudy can be handled here if added to the form later
-        }),
+        body: JSON.stringify(payload),
       });
-      // Optionally store a session token if returned, but here we push to verify.
+
       setName(nameInput);
       setGlobalEmail(emailInput);
-      router.push('/verify');
+      // Show success briefly before redirecting
+      const btn = document.getElementById("signup-btn");
+      if (btn) {
+        btn.textContent = isClubEmail ? "Application Sent! Redirecting..." : "Success! Redirecting...";
+        btn.classList.add("bg-emerald-500", "hover:bg-emerald-600");
+      }
+      setTimeout(() => {
+        router.push('/verify');
+      }, 1500);
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to sign up");
-    } finally {
       setIsLoading(false);
     }
   };
@@ -55,19 +81,23 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 relative overflow-hidden">
       {/* Background elements */}
-      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-indigo-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-brand/10 rounded-full blur-[100px] pointer-events-none" />
 
       <Link href="/" className="mb-8 flex flex-col items-center gap-2 group">
-        <div className="w-12 h-12 rounded-xl bg-indigo-500 flex items-center justify-center font-sora font-bold text-white tracking-widest text-sm shadow-[0_0_20px_rgba(99,102,241,0.3)] group-hover:scale-105 transition-transform">
-          HMU
+        <div className="w-12 h-12 rounded-xl bg-brand flex items-center justify-center font-dmserif font-bold text-white tracking-widest text-sm shadow-[0_0_20px_rgba(194,105,42,0.3)] group-hover:scale-105 transition-transform">
+          intrst
         </div>
       </Link>
 
       <Card className="w-full max-w-md bg-card/50 backdrop-blur-sm border-border glow-hover">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-sora font-bold">Join HMU</CardTitle>
+          <CardTitle className="text-3xl font-playfair font-bold">
+            {isClubEmail ? "Club Application" : "Join intrst"}
+          </CardTitle>
           <CardDescription className="text-base text-muted-foreground">
-            Your college email only. <span className="text-indigo-400 font-medium">No exceptions.</span>
+            {isClubEmail 
+              ? "Register your organization for official verification." 
+              : "Your college email only. No exceptions."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -78,15 +108,28 @@ export default function SignupPage() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name">{isClubEmail ? "Club/Organization Name" : "Full Name"}</Label>
               <Input 
                 id="name" 
-                placeholder="Priya Sharma" 
-                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500" 
+                placeholder={isClubEmail ? "Rotaract Club" : "Priya Sharma"} 
+                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
                 value={nameInput}
                 onChange={(e) => setNameInput(e.target.value)}
                 required 
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="username">Username</Label>
+              <Input 
+                id="username" 
+                placeholder="priya_2024" 
+                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
+                value={usernameInput}
+                onChange={(e) => setUsernameInput(e.target.value)}
+                required 
+              />
+              <p className="text-[10px] text-muted-foreground ml-1">Must be unique. This is how others will find you.</p>
             </div>
             
             <div className="space-y-2">
@@ -94,14 +137,72 @@ export default function SignupPage() {
               <Input 
                 id="email" 
                 type="email" 
-                placeholder="priya@bits-pilani.ac.in" 
-                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500" 
+                placeholder="name_vsp@gitam.in (Clubs) or student@gitam.edu" 
+                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
                 value={emailInput}
                 onChange={(e) => setEmailInput(e.target.value)}
                 required 
               />
-              <p className="text-xs text-muted-foreground">Must be your institutional email (e.g., .edu or .ac.in)</p>
+              {!isClubEmail && (
+                <div className="text-xs text-muted-foreground bg-accent/10 p-2 rounded-lg border border-accent/20">
+                  <p>Only <span className="font-bold">@student.gitam.edu</span> or <span className="font-bold">@gitam.in</span> emails are allowed.</p>
+                  <div className="mt-2 flex items-center justify-between">
+                    <span>Using another email?</span>
+                    <a 
+                      href="#"
+                      className="text-brand font-semibold underline hover:opacity-80"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        window.location.href = "mailto:intrst2026@gmail.com?subject=Manual Verification Request";
+                      }}
+                    >
+                      Manual Verification
+                    </a>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {isClubEmail && (
+              <div className="space-y-4 animate-in slide-in-from-top-2 duration-300 pt-2 pb-2">
+                <div className="space-y-2">
+                  <Label htmlFor="authorizedPerson">Authorized Representative Name</Label>
+                  <Input 
+                    id="authorizedPerson" 
+                    placeholder="Club President / Secretary" 
+                    className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
+                    value={authorizedPerson}
+                    onChange={(e) => setAuthorizedPerson(e.target.value)}
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Contact Number</Label>
+                  <Input 
+                    id="phone" 
+                    placeholder="+91 00000 00000" 
+                    className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    required 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Club Description / Bio</Label>
+                  <textarea 
+                    id="description" 
+                    placeholder="Tell us about your club's mission and activities..." 
+                    className="w-full bg-background/50 border border-border rounded-xl p-3 focus-visible:ring-brand min-h-[100px] outline-none text-sm text-white" 
+                    value={clubDescription}
+                    onChange={(e) => setClubDescription(e.target.value)}
+                    required 
+                  />
+                </div>
+                <div className="text-xs text-amber-400 bg-amber-500/5 p-3 rounded-xl border border-amber-500/20">
+                  Note: Club accounts require manual review by founders. You will be notified via email once approved.
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
@@ -110,7 +211,7 @@ export default function SignupPage() {
                   id="password" 
                   type={showPassword ? "text" : "password"} 
                   placeholder="••••••••" 
-                  className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500 pr-10" 
+                  className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand pr-10" 
                   value={passwordInput}
                   onChange={(e) => setPasswordInput(e.target.value)}
                   required 
@@ -131,14 +232,14 @@ export default function SignupPage() {
                 id="confirm-password" 
                 type={showPassword ? "text" : "password"} 
                 placeholder="••••••••" 
-                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-indigo-500" 
+                className="bg-background/50 border-border h-12 rounded-xl focus-visible:ring-brand" 
                 value={confirmPasswordInput}
                 onChange={(e) => setConfirmPasswordInput(e.target.value)}
                 required 
               />
             </div>
 
-            <Button disabled={isLoading} type="submit" className="w-full h-12 text-base font-semibold bg-indigo-500 hover:bg-indigo-600 rounded-xl mt-6">
+            <Button id="signup-btn" disabled={isLoading} type="submit" className="w-full h-12 text-base font-semibold bg-brand hover:opacity-90 rounded-xl mt-6">
               {isLoading ? "Creating Account..." : "Create Account"}
             </Button>
           </form>
@@ -152,7 +253,7 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <Button variant="outline" className="w-full h-12 text-base border-indigo-500/30 text-indigo-400 hover:bg-indigo-500/10 rounded-xl">
+          <Button variant="outline" className="w-full h-12 text-base border-brand/30 text-brand hover:bg-brand/10 rounded-xl">
             <svg viewBox="0 0 24 24" className="h-5 w-5 mr-2" fill="currentColor">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
               <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
@@ -165,7 +266,7 @@ export default function SignupPage() {
         <CardFooter className="flex flex-col space-y-6 pb-8">
           <div className="text-center text-sm text-muted-foreground w-full">
             Already have an account?{" "}
-            <Link href="/signin" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
+            <Link href="/signin" className="text-brand hover:text-accent font-medium transition-colors">
               Sign in
             </Link>
           </div>
