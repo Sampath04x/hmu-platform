@@ -24,7 +24,7 @@ const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "Ph.D
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const { name, setName, interests: selectedTags, setInterests: setSelectedTags, aiProfile, setIsLoggedIn } = useUser();
+  const { name, setName, interests: selectedTags, setInterests: setSelectedTags, aiProfile, setIsLoggedIn, user_id } = useUser();
   
   const [username, setUsername] = useState("");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
@@ -32,6 +32,14 @@ export default function OnboardingPage() {
   const [bio, setBio] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const [privacySettings, setPrivacySettings] = useState({
+    showPhoto: false,
+    showDepartment: true,
+    showYear: true,
+    allowMessageRequests: false,
+    girlsFirstProtection: true
+  });
 
   const toggleTag = (tag: string) => {
     if (selectedTags.includes(tag)) {
@@ -45,15 +53,23 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      await apiFetch("/auth/profile", {
+      if (!user_id) {
+        throw new Error("User session not found. Please log in again.");
+      }
+
+      let parsedYear = parseInt(year);
+      if (isNaN(parsedYear)) parsedYear = 6; // Handle Ph.D. as 6
+
+      await apiFetch(`/profiles/${user_id}`, {
         method: "PUT",
         body: JSON.stringify({
           username,
           name,
           department,
-          year_of_study: year,
+          year_of_study: parsedYear,
           bio,
           interests: selectedTags,
+          privacy_settings: privacySettings
         }),
       });
 
@@ -274,24 +290,28 @@ export default function OnboardingPage() {
 
             <div className="space-y-3">
               {[
-                { label: "Show my photo to non-connections", default: false },
-                { label: "Show my department", default: true },
-                { label: "Show my year", default: true },
-                { label: "Allow message requests from anyone", default: false },
-                { label: "Enable girls-first protection", desc: "Only people who've interacted with your content can message you first", default: true },
-              ].map((item, i) => (
-                <div key={i} className="flex justify-between items-start p-4 bg-card border border-border rounded-xl">
-                  <div className="flex-1 pr-5">
-                    <h3 className="font-medium text-foreground text-sm">{item.label}</h3>
-                    {item.desc && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.desc}</p>}
+                { key: "showPhoto", label: "Show my photo to non-connections" },
+                { key: "showDepartment", label: "Show my department" },
+                { key: "showYear", label: "Show my year" },
+                { key: "allowMessageRequests", label: "Allow message requests from anyone" },
+                { key: "girlsFirstProtection", label: "Enable girls-first protection", desc: "Only people who've interacted with your content can message you first" },
+              ].map((item, i) => {
+                const isActive = privacySettings[item.key as keyof typeof privacySettings];
+                return (
+                  <div key={i} className="flex justify-between items-start p-4 bg-card border border-border rounded-xl">
+                    <div className="flex-1 pr-5">
+                      <h3 className="font-medium text-foreground text-sm">{item.label}</h3>
+                      {item.desc && <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{item.desc}</p>}
+                    </div>
+                    <button
+                      onClick={() => setPrivacySettings(prev => ({ ...prev, [item.key]: !isActive }))}
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${isActive ? "bg-brand" : "bg-muted"}`}
+                    >
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${isActive ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
                   </div>
-                  <button
-                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${item.default ? "bg-brand" : "bg-muted"}`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${item.default ? "translate-x-6" : "translate-x-1"}`} />
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <Button

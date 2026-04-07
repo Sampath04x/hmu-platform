@@ -1,24 +1,17 @@
+import { supabase } from './supabase';
+
 export const getApiUrl = () => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+  let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  API_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "");
+  return API_BASE_URL;
 };
 
-export const getAuthToken = () => {
+export const getAuthToken = async () => {
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('intrst_token');
+    const { data } = await supabase.auth.getSession();
+    return data?.session?.access_token || null;
   }
   return null;
-};
-
-export const setAuthToken = (token: string) => {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('intrst_token', token);
-  }
-};
-
-export const removeAuthToken = () => {
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('intrst_token');
-  }
 };
 
 interface RequestOptions extends RequestInit {
@@ -36,7 +29,7 @@ export const apiFetch = async (endpoint: string, options: RequestOptions = {}) =
 
   // Add auth token if required
   if (options.requireAuth !== false) {
-    const token = getAuthToken();
+    const token = await getAuthToken();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
@@ -50,11 +43,22 @@ export const apiFetch = async (endpoint: string, options: RequestOptions = {}) =
   if (!response.ok) {
     let errorMsg = 'An error occurred during the API request.';
     try {
-      const errorData = await response.json();
-      errorMsg = errorData.error || errorData.message || errorMsg;
+      const textResponse = await response.text();
+      if (textResponse) {
+        try {
+          const errorData = JSON.parse(textResponse);
+          const potentialError = errorData.error || errorData.message;
+          errorMsg = typeof potentialError === 'string' 
+            ? potentialError 
+            : (typeof potentialError === 'object' ? JSON.stringify(potentialError) : errorMsg);
+        } catch {
+          errorMsg = textResponse;
+        }
+      } else {
+        errorMsg = response.statusText;
+      }
     } catch (e) {
-      // Not JSON
-      errorMsg = await response.text() || response.statusText;
+      errorMsg = response.statusText;
     }
     throw new Error(errorMsg);
   }

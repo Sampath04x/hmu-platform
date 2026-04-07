@@ -54,15 +54,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const savedInterests = localStorage.getItem("intrst_interests");
     const savedAiProfile = localStorage.getItem("intrst_ai_profile");
-    const savedToken = localStorage.getItem("intrst_token");
     
     if (savedInterests) setInterests(JSON.parse(savedInterests));
     if (savedAiProfile) setAiProfile(JSON.parse(savedAiProfile));
-    if (savedToken) setToken(savedToken);
 
-    // Check token and fetch user
-    const checkUser = async () => {
-      if (savedToken) {
+    const checkUser = async (sessionToken: string | null) => {
+      if (sessionToken) {
         try {
           const { apiFetch } = await import("@/lib/apiClient");
           const data = await apiFetch("/auth/me");
@@ -88,7 +85,31 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       }
     };
 
-    checkUser();
+    let subscription: any;
+    const initializeAuth = async () => {
+      const { supabase } = await import("@/lib/supabase");
+      const { data: { session } } = await supabase.auth.getSession();
+      const currentToken = session?.access_token || null;
+      setToken(currentToken);
+      await checkUser(currentToken);
+
+      const { data: authListener } = supabase.auth.onAuthStateChange(
+        async (event, newSession) => {
+          const newToken = newSession?.access_token || null;
+          setToken(newToken);
+          await checkUser(newToken);
+        }
+      );
+      subscription = authListener.subscription;
+    };
+
+    initializeAuth();
+
+    return () => {
+      if (subscription) {
+        subscription.unsubscribe();
+      }
+    };
   }, []);
 
   // Save to localStorage on change

@@ -63,8 +63,14 @@ router.get("/", async (req, res) => {
 // UPDATE user profile
 router.put("/:userId", verifyAuth, async (req, res) => {
   const { userId } = req.params;
-  const { name, bio, department, year_of_study, profile_image_url, gender } =
-    req.body;
+  const { name, username, bio, department, profile_image_url, gender, interests, privacy_settings } = req.body;
+  let { year_of_study } = req.body;
+
+  // Fix year_of_study parsing
+  if (typeof year_of_study === 'string') {
+    year_of_study = parseInt(year_of_study, 10);
+    if (isNaN(year_of_study)) year_of_study = 6; // Default to Ph.D. if invalid
+  }
 
   // Authorization check - users can only update their own profile
   if (req.user.id !== userId) {
@@ -74,26 +80,72 @@ router.put("/:userId", verifyAuth, async (req, res) => {
   }
 
   try {
-    const { data, error } = await supabase
+    const updatePayload = {
+      name,
+      bio,
+      department,
+      year_of_study,
+      profile_image_url,
+      gender,
+    };
+    if (username) updatePayload.username = username.toLowerCase().trim();
+    if (privacy_settings) updatePayload.privacy_settings = privacy_settings;
+
+    const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .update({
-        name,
-        bio,
-        department,
-        year_of_study,
-        profile_image_url,
-        gender,
-      })
+      .update(updatePayload)
       .eq("user_id", userId)
       .select();
 
-    if (error) {
-      return res.status(500).json({ error: error.message });
+    if (profileError) {
+      return res.status(500).json({ error: profileError.message });
+    }
+
+    // Handle interests if provided
+    if (interests && Array.isArray(interests)) {
+      // Find existing interests
+      const { data: existingInterests } = await supabase
+        .from('interests')
+        .select('*')
+        .in('interest', interests);
+
+      const existingMap = new Map();
+      if (existingInterests) {
+        existingInterests.forEach(i => existingMap.set(i.interest, i.interest_id));
+      }
+
+      // Identify missing interests
+      const missing = interests.filter(i => !existingMap.has(i)).map(i => ({ interest: i }));
+      let finalInterests = [...(existingInterests || [])];
+
+      if (missing.length > 0) {
+        const { data: newInterests } = await supabase
+          .from('interests')
+          .insert(missing)
+          .select();
+
+        if (newInterests) {
+          finalInterests = [...finalInterests, ...newInterests];
+        }
+      }
+
+      // We should replace their old interests with the new list
+      await supabase.from('user_interests').delete().eq('user_id', userId);
+
+      // Insert new ones
+      const userInterestsPayload = finalInterests.map(i => ({
+        user_id: userId,
+        interest_id: i.interest_id
+      }));
+
+      if (userInterestsPayload.length > 0) {
+        await supabase.from('user_interests').insert(userInterestsPayload);
+      }
     }
 
     res.json({
       message: "Profile updated successfully",
-      user: data[0],
+      user: profileData[0],
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

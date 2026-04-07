@@ -1,146 +1,170 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { LockKeyholeIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Loader2, ArrowRight } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/apiClient";
-import { useUser } from "@/context/UserContext";
 
-export default function VerifyPage() {
+function VerifyContent() {
   const router = useRouter();
-  const { email, setIsLoggedIn } = useUser();
-  const [otp, setOtp] = useState<string[]>(Array(6).fill(""));
-  const [timer, setTimer] = useState(60);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState("");
-  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const searchParams = useSearchParams();
+  const [email, setEmail] = useState("");
+  const [otp, setOtp] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [resendLoading, setResendLoading] = useState(false);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (timer > 0) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [timer]);
-
-  const handleChange = (index: number, value: string) => {
-    if (isNaN(Number(value))) return;
-    
-    const newOtp = [...otp];
-    newOtp[index] = value;
-    setOtp(newOtp);
-
-    // Auto-focus next
-    if (value !== "" && index < 5 && inputRefs.current[index + 1]) {
-      inputRefs.current[index + 1]?.focus();
-    }
-  };
-
-  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Backspace" && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    const pastedData = e.clipboardData.getData("text/plain").slice(0, 6);
-    if (!/^\d+$/.test(pastedData)) return;
-    
-    const newOtp = [...otp];
-    let i = 0;
-    for (const char of pastedData) {
-      newOtp[i] = char;
-      i++;
-    }
-    setOtp(newOtp);
-    if (i < 6) {
-      inputRefs.current[i]?.focus();
+    const emailParam = searchParams.get("email");
+    if (emailParam) {
+      setEmail(emailParam);
     } else {
-      inputRefs.current[5]?.focus();
+      const stored = sessionStorage.getItem("intrst_pending_profile");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.email) setEmail(parsed.email);
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+  }, [searchParams]);
+
+  const handleVerify = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+
+    if (!otp || otp.length !== 6) {
+      setError("Please enter a valid 6-digit OTP.");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const { data, error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: otp,
+        type: 'signup',
+      });
+
+      if (verifyError) throw verifyError;
+
+      // 4. Initialize profile in backend
+      const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
+      if (pendingProfileStr) {
+        const profileInfo = JSON.parse(pendingProfileStr);
+        await apiFetch("/auth/initialize-profile", {
+          method: "POST",
+          body: JSON.stringify({
+            user_id: data.user?.id,
+            email: data.user?.email,
+            name: profileInfo.name,
+            username: profileInfo.username,
+          }),
+        });
+        sessionStorage.removeItem("intrst_pending_profile");
+      }
+
+      router.push("/onboarding");
+    } catch (err: any) {
+      setError(err.message || "Invalid OTP code.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (otp.join("").length === 6) {
-      setIsLoading(true);
-      setErrorMsg("");
-      try {
-        await apiFetch("/auth/verify-email", {
-          method: "POST",
-          body: JSON.stringify({ token: otp.join("") })
-        });
-        setIsLoggedIn(true);
-        router.push("/onboarding");
-      } catch (err: any) {
-        setErrorMsg(err.message || "Failed to verify code");
-      } finally {
-        setIsLoading(false);
-      }
+  const handleResend = async () => {
+    setResendLoading(true);
+    setError(null);
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+      });
+      if (error) throw error;
+      alert("A new code has been sent!");
+    } catch (err: any) {
+      setError(err.message || "Failed to resend code.");
+    } finally {
+      setResendLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4">
-      <Card className="w-full max-w-md bg-card/50 backdrop-blur-sm border-border glow-hover">
-        <CardHeader className="text-center space-y-4 pt-8">
-          <div className="w-16 h-16 rounded-2xl bg-brand/10 flex items-center justify-center mx-auto border border-brand/20">
-            <LockKeyholeIcon className="w-8 h-8 text-brand" />
-          </div>
-          <div>
-            <CardTitle className="text-3xl font-dmserif font-bold mb-2">Check Your Email</CardTitle>
-            <CardDescription className="text-base text-muted-foreground">
-              We sent a 6-digit code to <span className="text-white font-medium">{email || "your email"}</span>
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="pb-8">
-          {errorMsg && (
-            <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-lg text-sm mb-4 text-center">
-              {errorMsg}
+    <Card className="w-full max-w-md z-10 border-zinc-800 bg-zinc-950/50 backdrop-blur-xl shadow-2xl">
+      <CardHeader className="space-y-1 pb-6">
+        <CardTitle className="text-3xl font-bold tracking-tight text-center bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 text-transparent bg-clip-text">
+          Verify Email
+        </CardTitle>
+        <CardDescription className="text-center text-zinc-400">
+          Enter the 6-digit OTP sent to {email || "your email"}
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleVerify} className="space-y-4">
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-md text-red-400 text-sm text-center">
+              {error}
             </div>
           )}
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="flex justify-center gap-2 sm:gap-4">
-              {otp.map((data, index) => (
-                <input
-                  key={index}
-                  ref={(el) => { inputRefs.current[index] = el; }}
-                  type="text"
-                  inputMode="numeric"
-                  maxLength={1}
-                  value={data}
-                  onChange={(e) => handleChange(index, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(index, e)}
-                  onPaste={handlePaste}
-                  className="w-10 h-14 sm:w-12 sm:h-16 text-center text-2xl font-dmserif font-semibold bg-background border border-border rounded-xl focus:border-brand focus:ring-1 focus:ring-brand outline-none transition-all"
-                />
-              ))}
-            </div>
 
-            <Button type="submit" className="w-full h-14 text-lg font-semibold bg-brand hover:opacity-90 rounded-xl" disabled={otp.join("").length !== 6 || isLoading}>
-              {isLoading ? "Verifying..." : "Verify Email"}
-            </Button>
-          </form>
-        </CardContent>
-        <CardFooter className="flex flex-col items-center gap-2 pb-8">
-          {timer > 0 ? (
-            <p className="text-sm text-muted-foreground">
-              Resend code in <span className="text-brand font-mono">{timer}s</span>
-            </p>
-          ) : (
-            <Button variant="ghost" className="text-brand hover:text-accent hover:bg-brand/10" onClick={() => setTimer(60)}>
-              Resend code
-            </Button>
-          )}
-          <p className="text-xs text-muted-foreground mt-4">Code expires in 10 minutes.</p>
-        </CardFooter>
-      </Card>
+          <div className="space-y-2">
+            <Input
+              id="otp"
+              name="otp"
+              placeholder="123456"
+              type="text"
+              maxLength={6}
+              value={otp}
+              onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
+              className="bg-zinc-900/50 border-zinc-800 focus-visible:ring-indigo-500 text-center tracking-widest text-2xl h-14"
+              required
+            />
+          </div>
+
+          <Button
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-medium h-12"
+            type="submit"
+            disabled={loading || !otp}
+          >
+            {loading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              <>
+                Verify OTP <ArrowRight className="ml-2 h-4 w-4" />
+              </>
+            )}
+          </Button>
+        </form>
+      </CardContent>
+      <CardFooter className="flex justify-center border-t border-zinc-800/50 pt-4">
+        <Button 
+          variant="link" 
+          onClick={handleResend}
+          disabled={resendLoading || !email}
+          className="text-zinc-400 hover:text-indigo-400 transition-colors"
+        >
+          {resendLoading ? "Resending..." : "Didn't receive a code? Resend"}
+        </Button>
+      </CardFooter>
+    </Card>
+  );
+}
+
+export default function VerifyPage() {
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-zinc-950 via-zinc-900 to-black text-zinc-100">
+      <div className="absolute inset-0 z-0 bg-[linear-gradient(to_right,#4f4f4f2e_1px,transparent_1px),linear-gradient(to_bottom,#4f4f4f2e_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+      
+      <Suspense fallback={<Loader2 className="w-8 h-8 animate-spin text-indigo-500" />}>
+        <VerifyContent />
+      </Suspense>
     </div>
   );
 }
