@@ -1,0 +1,6 @@
+{
+  "code": "23503",
+  "details": "Key (canteen_id)=(ae17c623-2419-48b6-b52b-1a0e9b98ecfa) is not present in table \"canteens\".",
+  "hint": null,
+  "message": "insert or update on table \"canteen_reviews\" violates foreign key constraint \"canteen_reviews_canteen_id_fkey\""
+}

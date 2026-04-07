@@ -19,8 +19,16 @@ const app = express();
 // Security Middlewares
 app.use(helmet()); // Sets security HTTP headers
 app.use(morgan("dev")); // HTTP request logger
-app.use(cors());
+app.use(cors({
+  origin: ["http://localhost:3000", "https://intrst.in"],
+  credentials: true
+}));
 app.use(express.json());
+
+// Health check for Render
+app.get("/health", (req, res) => {
+  res.json({ status: "ok", timestamp: new Date().toISOString() });
+});
 
 // Global Rate Limiting
 const limiter = rateLimit({
