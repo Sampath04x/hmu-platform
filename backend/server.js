@@ -20,7 +20,7 @@ const app = express();
 app.use(helmet()); // Sets security HTTP headers
 app.use(morgan("dev")); // HTTP request logger
 app.use(cors({
-  origin: ["http://localhost:3000", "https://intrst.in"],
+  origin: ["http://localhost:3000", "https://intrst.in", /\.vercel\.app$/],
   credentials: true
 }));
 app.use(express.json());
