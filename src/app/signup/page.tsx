@@ -79,7 +79,7 @@ export default function SignupPage() {
       } else {
         // Email confirmation is enabled, redirect to verify
         // Pass the email as a query parameter so we know who to verify
-        router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+        router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=signup`);
       }
     } catch (err: any) {
       setError(err.message || "An error occurred during signup.");

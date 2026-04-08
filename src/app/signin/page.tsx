@@ -54,7 +54,7 @@ export default function SigninPage() {
           email: formData.email,
         });
         if (authError) throw authError;
-        router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+        router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=magiclink`);
       }
     } catch (err: any) {
       setError(err.message || "Invalid login credentials.");
@@ -153,7 +153,7 @@ export default function SigninPage() {
         </CardContent>
         <CardFooter className="flex justify-center border-t border-zinc-800/50 pt-4">
           <p className="text-sm text-zinc-400">
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
             <Link href="/signup" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
               Sign up
             </Link>

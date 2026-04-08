@@ -11,7 +11,6 @@ import {
   MessageSquare, 
   ChevronRight,
   Send,
-  User,
   Quote,
   TrendingUp,
   AlertCircle
@@ -34,7 +33,7 @@ import { useUser } from "@/context/UserContext";
 export default function CanteenDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user_id } = useUser();
+  useUser();
   const [canteen, setCanteen] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [review, setReview] = useState("");
@@ -319,7 +318,7 @@ export default function CanteenDetailPage() {
             <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-brand/5 to-accent/5 border border-border/40 backdrop-blur-md">
                <h4 className="font-dmserif italic text-2xl mb-4 text-white">Pro Tip</h4>
                <p className="text-muted-foreground font-medium leading-relaxed italic">
-                 "Wait for the second batch of Chai at 4:20 PM. It's usually fresher and stronger."
+                 &quot;Wait for the second batch of Chai at 4:20 PM. It&apos;s usually fresher and stronger.&quot;
                </p>
                <div className="mt-4 flex items-center gap-2">
                  <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-brand font-bold text-xs">A</div>

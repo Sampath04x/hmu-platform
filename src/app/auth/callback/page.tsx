@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { useUser } from '@/context/UserContext';
-import { apiFetch, setAuthToken } from '@/lib/apiClient';
+import { apiFetch } from '@/lib/apiClient';
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -20,9 +20,6 @@ export default function AuthCallbackPage() {
           router.push('/signin');
           return;
         }
-
-        // IMPORTANT: Store the token for apiClient
-        setAuthToken(session.access_token);
 
         const user = session.user;
         setEmail(user.email || '');

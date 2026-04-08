@@ -29,9 +29,20 @@ import {
   DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog";
-import { useToast } from "@/components/ui/use-toast";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import supabase from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
+import { toast as sonnerToast } from "sonner";
+
+function ScrollArea({ children, className }: { children: React.ReactNode, className?: string }) {
+  return <div className={`overflow-auto ${className}`}>{children}</div>;
+}
+
+function useToast() {
+  return {
+    toast: (props: any) => {
+       sonnerToast(props.title, { description: props.description });
+    }
+  }
+}
 
 const BUILDINGS = [
   "GST - Engineering",
@@ -371,10 +382,8 @@ function RoomTimetableDialog({ room }: { room: any }) {
 
   return (
     <Dialog onOpenChange={(open) => open && fetchTimetable()}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-10 w-10 border border-border/50 rounded-xl hover:bg-brand/10 transition-colors">
-          <Clock className="w-5 h-5 text-muted-foreground hover:text-brand" />
-        </Button>
+      <DialogTrigger render={<Button variant="ghost" size="icon" className="h-10 w-10 border border-border/50 rounded-xl hover:bg-brand/10 transition-colors" />}>
+        <Clock className="w-5 h-5 text-muted-foreground hover:text-brand" />
       </DialogTrigger>
       <DialogContent className="bg-card border-border/80 text-white max-w-lg">
         <DialogHeader>
@@ -443,11 +452,9 @@ function AddRoomDialog({ building, onSuccess }: { building: string, onSuccess: (
 
     return (
         <Dialog>
-            <DialogTrigger asChild>
-                <Button variant="outline" className="bg-card border-border/50 text-white font-medium hover:bg-brand/10">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Room
-                </Button>
+            <DialogTrigger render={<Button variant="outline" className="bg-card border-border/50 text-white font-medium hover:bg-brand/10" />}>
+                <Plus className="w-4 h-4 mr-2" />
+                Add Room
             </DialogTrigger>
             <DialogContent className="bg-card border-border/80 text-white">
                 <DialogHeader>
@@ -509,11 +516,9 @@ function ManageRoomsDialog({ currentBuilding, onSuccess }: { currentBuilding: st
 
     return (
         <Dialog>
-            <DialogTrigger asChild>
-                <Button className="bg-brand hover:bg-brand/90 font-semibold shadow-[0_0_20px_rgba(139,139,67,0.3)]">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Manage Rooms
-                </Button>
+            <DialogTrigger render={<Button className="bg-brand hover:bg-brand/90 font-semibold shadow-[0_0_20px_rgba(139,139,67,0.3)]" />}>
+                <Plus className="w-4 h-4 mr-2" />
+                Manage Rooms
             </DialogTrigger>
             <DialogContent className="bg-card border-border/80 text-white max-w-2xl">
                 <DialogHeader>

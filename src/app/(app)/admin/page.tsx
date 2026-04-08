@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { apiFetch } from "@/lib/apiClient";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export default function AdminPage() {
   const { role, user_id } = useUser();

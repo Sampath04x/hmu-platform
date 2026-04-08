@@ -14,7 +14,7 @@ const PrivacyPage = () => {
         <div className="text-center space-y-4">
           <ShieldCheckIcon className="w-16 h-16 text-brand mx-auto mb-4" />
           <h1 className="text-4xl md:text-6xl font-dmserif font-bold text-white tracking-tight">Privacy Manifesto</h1>
-          <p className="text-muted-foreground text-lg">We don't just protect your data. We respect your anonymity.</p>
+          <p className="text-muted-foreground text-lg">We don&apos;t just protect your data. We respect your anonymity.</p>
         </div>
 
         <div className="grid grid-cols-1 gap-8">
@@ -24,7 +24,7 @@ const PrivacyPage = () => {
               <h2 className="text-xl font-bold uppercase tracking-widest text-white">Anonymity by Design</h2>
             </div>
             <p className="text-muted-foreground leading-relaxed">
-              When using the "Connect" feature, your identity is completely hidden behind an AI-generated codename. No photos, no roll numbers, no social links—until you both choose to reveal.
+              When using the &quot;Connect&quot; feature, your identity is completely hidden behind an AI-generated codename. No photos, no roll numbers, no social links—until you both choose to reveal.
             </p>
           </section>
 

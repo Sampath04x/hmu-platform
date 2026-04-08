@@ -2,18 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Coffee, Star, MapPin, Search, Filter, TrendingUp, Info, AlertCircle, Quote } from "lucide-react";
+import { Coffee, Star, MapPin, Search, Filter, TrendingUp, Info, AlertCircle } from "lucide-react";
 import { 
   Card, 
-  CardContent, 
-  CardHeader, 
-  CardTitle,
-  CardDescription
+  CardContent
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/apiClient";
 
 export default function CanteensPage() {
@@ -92,7 +89,7 @@ export default function CanteensPage() {
                    <TrendingUp className="w-6 h-6" /> Trending Highlight
                 </div>
                 <h2 className="text-4xl md:text-5xl font-dmserif leading-tight">
-                  "V-Shop Biryani is back to its glory days. Get there before 1:30 PM."
+                  &quot;V-Shop Biryani is back to its glory days. Get there before 1:30 PM.&quot;
                 </h2>
                 <div className="flex items-center gap-4 pt-4 border-t border-brand/20 max-w-sm">
                    <Avatar className="w-12 h-12 border border-brand/20">

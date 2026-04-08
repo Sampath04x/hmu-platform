@@ -17,6 +17,7 @@ function VerifyContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [resendLoading, setResendLoading] = useState(false);
+  const [verifyType, setVerifyType] = useState<any>("signup");
 
   useEffect(() => {
     const emailParam = searchParams.get("email");
@@ -33,6 +34,11 @@ function VerifyContent() {
         }
       }
     }
+
+    const typeParam = searchParams.get("type");
+    if (typeParam) {
+      setVerifyType(typeParam);
+    }
   }, [searchParams]);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -47,32 +53,64 @@ function VerifyContent() {
     }
 
     try {
+      console.log(`Verifying OTP for ${email} with type ${verifyType}...`);
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
-        type: 'signup',
+        type: verifyType,
       });
 
-      if (verifyError) throw verifyError;
-
-      // 4. Initialize profile in backend
-      const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
-      if (pendingProfileStr) {
-        const profileInfo = JSON.parse(pendingProfileStr);
-        await apiFetch("/auth/initialize-profile", {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: data.user?.id,
-            email: data.user?.email,
-            name: profileInfo.name,
-            username: profileInfo.username,
-          }),
-        });
-        sessionStorage.removeItem("intrst_pending_profile");
+      if (verifyError) {
+        console.error("Verification error:", verifyError);
+        throw verifyError;
       }
 
-      router.push("/onboarding");
+      console.log("OTP verified successfully. Checking profile status...");
+
+      // 4. Initialize profile in backend if signing up
+      const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
+      if (pendingProfileStr) {
+        console.log("Found pending profile, initializing...");
+        try {
+          const profileInfo = JSON.parse(pendingProfileStr);
+          await apiFetch("/auth/initialize-profile", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: data.user?.id,
+              email: data.user?.email,
+              name: profileInfo.name,
+              username: profileInfo.username,
+            }),
+          });
+          sessionStorage.removeItem("intrst_pending_profile");
+          console.log("Profile initialized. Redirecting to onboarding...");
+          router.push("/onboarding");
+          return;
+        } catch (initError) {
+          console.error("Failed to initialize profile:", initError);
+          // Fall through to check existing profile
+        }
+      }
+
+      // Check if user already has a profile
+      try {
+        console.log("Fetching current profile status...");
+        const meData = await apiFetch("/auth/me");
+        if (meData?.profile) {
+          console.log("Profile exists. Redirecting to home...");
+          router.push("/home");
+        } else {
+          console.log("No profile found. Redirecting to onboarding...");
+          router.push("/onboarding");
+        }
+      } catch (meError) {
+        console.error("Failed to fetch profile info:", meError);
+        // Default to onboarding if we can't be sure
+        router.push("/onboarding");
+      }
+
     } catch (err: any) {
+      console.error("Verification flow failed:", err);
       setError(err.message || "Invalid OTP code.");
     } finally {
       setLoading(false);
@@ -84,7 +122,7 @@ function VerifyContent() {
     setError(null);
     try {
       const { error } = await supabase.auth.resend({
-        type: 'signup',
+        type: verifyType,
         email,
       });
       if (error) throw error;

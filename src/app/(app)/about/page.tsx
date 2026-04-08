@@ -1,8 +1,7 @@
 "use client";
 
 import React from "react";
-import { MoveRightIcon, MailIcon, SparklesIcon, UsersIcon, ShieldCheckIcon, GlobeIcon, Share2Icon } from "lucide-react";
-import Link from "next/link";
+import { MailIcon, SparklesIcon, UsersIcon, ShieldCheckIcon, GlobeIcon, Share2Icon } from "lucide-react";
 
 const AboutPage = () => {
   return (
@@ -67,13 +66,13 @@ const AboutPage = () => {
               </div>
               <div className="space-y-6">
                 <blockquote className="border-l-4 border-brand pl-6 py-2 italic text-lg text-white/90">
-                  "intrst is the honest campus layer that should have existed from day one."
+                  &quot;intrst is the honest campus layer that should have existed from day one.&quot;
                 </blockquote>
                 <div className="flex items-center gap-4 pt-4 border-t border-border/40">
                     <div className="w-12 h-12 rounded-full bg-brand/20 flex items-center justify-center font-bold text-brand">F</div>
                     <div>
                         <div className="text-white font-bold">The Founders</div>
-                        <div className="text-sm text-muted-foreground">Class of '26</div>
+                        <div className="text-sm text-muted-foreground">Class of &apos;26</div>
                     </div>
                 </div>
               </div>
@@ -85,7 +84,7 @@ const AboutPage = () => {
         <div className="flex flex-col md:flex-row items-center justify-between gap-8 p-10 rounded-3xl border border-border/40 bg-card/10">
             <div className="space-y-2 text-center md:text-left">
                 <h3 className="text-2xl font-bold text-white">Have questions?</h3>
-                <p className="text-muted-foreground">We're always open to feedback and collaboration.</p>
+                <p className="text-muted-foreground">We&apos;re always open to feedback and collaboration.</p>
             </div>
             <div className="flex flex-wrap items-center justify-center gap-4">
                 <a 
