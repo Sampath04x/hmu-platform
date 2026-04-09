@@ -1,0 +1,12 @@
+src/app/(app)/admin/page.tsx(340,10): error TS2304: Cannot find name 'Avatar'.
+src/app/(app)/admin/page.tsx(341,12): error TS2304: Cannot find name 'AvatarFallback'.
+src/app/(app)/admin/page.tsx(343,13): error TS2304: Cannot find name 'AvatarFallback'.
+src/app/(app)/admin/page.tsx(344,11): error TS2304: Cannot find name 'Avatar'.
+src/app/(app)/communities/vacant-classrooms/page.tsx(32,8): error TS2613: Module '"C:/Users/hp/.gemini/antigravity/scratch/Intrst/src/lib/supabase"' has no default export. Did you mean to use 'import { supabase } from "C:/Users/hp/.gemini/antigravity/scratch/Intrst/src/lib/supabase"' instead?
+src/app/(app)/communities/vacant-classrooms/page.tsx(385,22): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.
+src/app/(app)/communities/vacant-classrooms/page.tsx(457,28): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.
+src/app/(app)/communities/vacant-classrooms/page.tsx(523,28): error TS2322: Type '{ children: Element; asChild: true; }' is not assignable to type 'IntrinsicAttributes & Props<unknown>'.
+  Property 'asChild' does not exist on type 'IntrinsicAttributes & Props<unknown>'.
+src/app/auth/callback/page.tsx(7,20): error TS2724: '"@/lib/apiClient"' has no exported member named 'setAuthToken'. Did you mean 'getAuthToken'?

@@ -1,0 +1,500 @@
+﻿
+> intrst@0.1.0 build
+> next build
+
+  Γû▓ Next.js 14.2.35
+  - Environments: .env
+
+   Creating an optimized production build ...
+ Γ£ô Compiled successfully
+   Linting and checking validity of types ...
+node.exe : 
+At line:1 char:1
++ & "C:\Program 
+Files\nodejs/node.exe" 
+"C:\Program 
+Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
+    + CategoryInfo         
+     : NotSpecified: (:St  
+  ring) [], RemoteExcept   
+ ion
+    + FullyQualifiedErrorI 
+   d : NativeCommandError
+ 
+Failed to compile.
+
+./src/app/(app)/about/page.
+tsx
+4:10  Warning: 
+'MoveRightIcon' is defined 
+but never used.  @typescrip
+t-eslint/no-unused-vars
+4:10  Warning: 
+'MoveRightIcon' is defined 
+but never used.  
+no-unused-vars
+5:8  Warning: 'Link' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+5:8  Warning: 'Link' is 
+defined but never used.  
+no-unused-vars
+70:19  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+70:92  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+76:81  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+88:56  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+
+./src/app/(app)/admin/page.
+tsx
+10:3  Warning: 'XSquare' 
+is defined but never used. 
+ @typescript-eslint/no-unus
+ed-vars
+10:3  Warning: 'XSquare' 
+is defined but never used. 
+ no-unused-vars
+26:10  Warning: 'toast' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+26:10  Warning: 'toast' is 
+defined but never used.  
+no-unused-vars
+31:17  Warning: 'user_id' 
+is assigned a value but 
+never used.  @typescript-es
+lint/no-unused-vars
+31:17  Warning: 'user_id' 
+is assigned a value but 
+never used.  no-unused-vars
+32:38  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+337:67  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+395:54  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+438:50  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+439:19  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+458:60  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+478:47  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+500:10  Warning: 
+'RoleItem' is defined but 
+never used.  @typescript-es
+lint/no-unused-vars
+500:10  Warning: 
+'RoleItem' is defined but 
+never used.  no-unused-vars
+500:36  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+
+./src/app/(app)/canteens/pa
+ge.tsx
+5:79  Warning: 'Quote' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+5:79  Warning: 'Quote' is 
+defined but never used.  
+no-unused-vars
+9:3  Warning: 'CardHeader' 
+is defined but never used. 
+ @typescript-eslint/no-unus
+ed-vars
+9:3  Warning: 'CardHeader' 
+is defined but never used. 
+ no-unused-vars
+10:3  Warning: 'CardTitle' 
+is defined but never used. 
+ @typescript-eslint/no-unus
+ed-vars
+10:3  Warning: 'CardTitle' 
+is defined but never used. 
+ no-unused-vars
+11:3  Warning: 
+'CardDescription' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+11:3  Warning: 
+'CardDescription' is 
+defined but never used.  
+no-unused-vars
+16:34  Warning: 
+'AvatarImage' is defined 
+but never used.  @typescrip
+t-eslint/no-unused-vars
+16:34  Warning: 
+'AvatarImage' is defined 
+but never used.  
+no-unused-vars
+20:44  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+30:23  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+37:34  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+95:19  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+95:87  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+141:19  Warning: Using 
+`<img>` could result in 
+slower LCP and higher 
+bandwidth. Consider using 
+`<Image />` from 
+`next/image` to 
+automatically optimize 
+images. This may incur 
+additional usage or cost 
+from your provider. See: ht
+tps://nextjs.org/docs/messa
+ges/no-img-element  
+@next/next/no-img-element
+
+./src/app/(app)/canteens/[i
+d]/page.tsx
+14:3  Warning: 'User' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+14:3  Warning: 'User' is 
+defined but never used.  
+no-unused-vars
+37:11  Warning: 'user_id' 
+is assigned a value but 
+never used.  @typescript-es
+lint/no-unused-vars
+37:11  Warning: 'user_id' 
+is assigned a value but 
+never used.  no-unused-vars
+38:42  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+80:19  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+163:47  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+236:54  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+322:18  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+322:67  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+322:99  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+
+./src/app/(app)/communities
+/vacant-classrooms/page.tsx
+41:20  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+62:48  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+64:36  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+65:50  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+87:6  Warning: React Hook 
+useEffect has a missing 
+dependency: 
+'fetchClassrooms'. Either 
+include it or remove the 
+dependency array.  
+react-hooks/exhaustive-deps
+127:14  Warning: 'error' 
+is defined but never used. 
+ @typescript-eslint/no-unus
+ed-vars
+132:9  Warning: 
+'handleVote' is assigned a 
+value but never used.  @typ
+escript-eslint/no-unused-va
+rs
+132:9  Warning: 
+'handleVote' is assigned a 
+value but never used.  
+no-unused-vars
+366:48  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+367:46  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+510:18  Warning: 'error' 
+is defined but never used. 
+ @typescript-eslint/no-unus
+ed-vars
+
+./src/app/(app)/events/page
+.tsx
+41:40  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/app/(app)/home/page.t
+sx
+20:9  Warning: 
+'canPostMedia' is assigned 
+a value but never used.  @t
+ypescript-eslint/no-unused-
+vars
+20:9  Warning: 
+'canPostMedia' is assigned 
+a value but never used.  
+no-unused-vars
+
+./src/app/(app)/layout.tsx
+5:31  Warning: 
+'MessageSquareIcon' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+5:31  Warning: 
+'MessageSquareIcon' is 
+defined but never used.  
+no-unused-vars
+5:125  Warning: 
+'LayoutDashboardIcon' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+5:125  Warning: 
+'LayoutDashboardIcon' is 
+defined but never used.  
+no-unused-vars
+20:11  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/app/(app)/privacy/pag
+e.tsx
+17:62  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+27:30  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+27:38  Error: `"` can be 
+escaped with `&quot;`, 
+`&ldquo;`, `&#34;`, 
+`&rdquo;`.  
+react/no-unescaped-entities
+
+./src/app/auth/callback/pag
+e.tsx
+11:11  Warning: 'setName' 
+is assigned a value but 
+never used.  @typescript-es
+lint/no-unused-vars
+11:11  Warning: 'setName' 
+is assigned a value but 
+never used.  no-unused-vars
+42:30  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+48:21  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/app/onboarding/page.t
+sx
+78:19  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/app/signin/page.tsx
+59:19  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+156:16  Error: `'` can be 
+escaped with `&apos;`, 
+`&lsquo;`, `&#39;`, 
+`&rsquo;`.  
+react/no-unescaped-entities
+
+./src/app/signup/page.tsx
+84:19  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/app/verify/page.tsx
+20:48  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+32:18  Warning: 'e' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+112:19  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+130:19  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+
+./src/components/Personalit
+yPrompt.tsx
+4:10  Warning: 'Button' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+4:10  Warning: 'Button' is 
+defined but never used.  
+no-unused-vars
+6:10  Warning: 'Badge' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+6:10  Warning: 'Badge' is 
+defined but never used.  
+no-unused-vars
+7:43  Warning: 
+'ChevronRight' is defined 
+but never used.  @typescrip
+t-eslint/no-unused-vars
+7:43  Warning: 
+'ChevronRight' is defined 
+but never used.  
+no-unused-vars
+15:50  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+47:46  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+61:48  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+70:14  Warning: 'err' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+150:46  Warning: 
+Unexpected any. Specify a 
+different type.  @typescrip
+t-eslint/no-explicit-any
+
+./src/context/UserContext.t
+sx
+27:16  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+28:33  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+47:50  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+88:23  Warning: Unexpected 
+any. Specify a different 
+type.  @typescript-eslint/n
+o-explicit-any
+
+./src/lib/apiClient.ts
+60:14  Warning: 'e' is 
+defined but never used.  @t
+ypescript-eslint/no-unused-
+vars
+
+info  - Need to disable 
+some ESLint rules? Learn 
+more here: https://nextjs.o
+rg/docs/basic-features/esli
+nt#disabling-rules
