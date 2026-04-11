@@ -381,7 +381,7 @@ export default function HomePage() {
                     <p className="text-xs text-muted-foreground text-center py-2">No comments yet. Start the conversation!</p>
                   ) : (
                     <div className="space-y-4">
-                      {/* @ts-ignore */}
+
                       {postComments[post.id]?.map((comment) => (
                         <div key={comment.id} className="flex gap-3">
                           <Avatar className="w-7 h-7 border border-border">

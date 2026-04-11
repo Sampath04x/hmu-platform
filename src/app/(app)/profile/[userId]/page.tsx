@@ -75,11 +75,11 @@ export default function UserProfilePage() {
       if (isFollowing) {
         await apiFetch(`/profiles/${userId}/follow`, { method: "DELETE" });
         setIsFollowing(false);
-        setProfile(prev => ({ ...prev, followersCount: Math.max(0, (prev.followersCount || 0) - 1) }));
+        setProfile((prev: any) => ({ ...prev, followersCount: Math.max(0, (prev.followersCount || 0) - 1) }));
       } else {
         await apiFetch(`/profiles/${userId}/follow`, { method: "POST" });
         setIsFollowing(true);
-        setProfile(prev => ({ ...prev, followersCount: (prev.followersCount || 0) + 1 }));
+        setProfile((prev: any) => ({ ...prev, followersCount: (prev.followersCount || 0) + 1 }));
       }
     } catch (err) {
       console.error("Failed to toggle follow status:", err);

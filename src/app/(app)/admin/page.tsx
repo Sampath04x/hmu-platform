@@ -20,7 +20,8 @@ import {
   Trash2,
   ShieldAlert,
   KeySquare,
-  ShieldOff
+  ShieldOff,
+  Trophy
 } from "lucide-react";
 import { 
   Card, 

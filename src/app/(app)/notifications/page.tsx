@@ -166,7 +166,7 @@ export default function NotificationsPage() {
           </div>
           <h3 className="text-lg font-medium text-white">All caught up!</h3>
           <p className="text-sm text-muted-foreground max-w-[240px] mt-1 text-balance">
-            We'll notify you when clubs post something new or your events are updated.
+            We&apos;ll notify you when clubs post something new or your events are updated.
           </p>
         </div>
       ) : (

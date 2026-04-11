@@ -105,7 +105,7 @@ export default function ClubRequestPage() {
           </div>
           <h1 className="text-5xl lg:text-7xl font-dmserif font-bold tracking-tight leading-[1.1]">
             Elevate Your <br />
-            <span className="text-brand italic">Club's Presence.</span>
+            <span className="text-brand italic">Club&apos;s Presence.</span>
           </h1>
           <p className="text-xl text-zinc-400 font-medium leading-relaxed max-w-md">
             The HMU Platform is exclusive Gitam community for clubs to host events, engage with members, and grow their influence.
