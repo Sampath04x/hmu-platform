@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { apiFetch } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,23 +13,42 @@ import { Textarea } from "@/components/ui/textarea";
 import { useUser } from "@/context/UserContext";
 import { PersonalityPrompt } from "@/components/PersonalityPrompt";
 
+const tabs = ["All", "Tips", "Questions", "Events", "Utilities", "Opinions"];
+
 export default function HomePage() {
   const { user_id, has_completed_personality, setHasCompletedPersonality, role, isAuthLoading } = useUser();
   const [activeTab, setActiveTab] = useState("All");
   const [isFabOpen, setIsFabOpen] = useState(false);
-  const [postTag, setPostTag] = useState("QUESTION"); // Default to Question
+  const [postTag, setPostTag] = useState("QUESTION");
+  const [postTitle, setPostTitle] = useState("");
   const [postContent, setPostContent] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [isPosting, setIsPosting] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-// ... existing code ...
   const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [postComments, setPostComments] = useState<Record<string, any[]>>({});
+  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const showPersonalityPrompt = !isAuthLoading && !has_completed_personality && !!user_id;
+
+  const fetchPosts = async () => {
+    try {
+      setIsLoading(true);
+      const data = await apiFetch("/posts");
+      setPosts(data?.posts || []);
+    } catch (err) {
+      console.error("Error fetching posts:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const fetchFeaturedEvents = async () => {
     try {
       setEventsLoading(true);
-      // Fetch events along with club details
       const { data, error } = await supabase
         .from('events')
         .select(`

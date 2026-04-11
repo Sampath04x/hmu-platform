@@ -110,7 +110,7 @@ export const ApprovalGuard = ({ children }: { children: React.ReactNode }) => {
         <motion.div
            initial={{ opacity: 0, y: 30, scale: 0.95 }}
            animate={{ opacity: 1, y: 0, scale: 1 }}
-           transition={{ duration: 0.6, cubicBezier: [0.22, 1, 0.36, 1] }}
+           transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
            className="max-w-xl w-full relative z-10"
         >
           <Card className="p-12 border-white/5 bg-white/[0.03] backdrop-blur-[40px] text-center space-y-10 shadow-[0_24px_80px_-12px_rgba(0,0,0,0.5)] ring-1 ring-white/10 rounded-[3rem]">

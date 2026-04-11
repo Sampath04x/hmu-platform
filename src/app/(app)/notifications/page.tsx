@@ -73,17 +73,17 @@ function getNotifContent(notif: Notification) {
 }
 
 export default function NotificationsPage() {
-  const { user } = useUser();
+  const { user_id } = useUser();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchNotifications = async () => {
-    if (!user?.id) return;
+    if (!user_id) return;
     try {
       const { data, error } = await supabase
         .from("notifications")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", user_id)
         .order("created_at", { ascending: false })
         .limit(50);
 
@@ -98,15 +98,15 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications();
-  }, [user?.id]);
+  }, [user_id]);
 
   const markAllRead = async () => {
-    if (!user?.id) return;
+    if (!user_id) return;
     try {
       const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
-        .eq("user_id", user.id)
+        .eq("user_id", user_id)
         .eq("is_read", false);
 
       if (error) throw error;
