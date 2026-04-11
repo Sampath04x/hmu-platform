@@ -89,6 +89,7 @@ router.put("/:userId", verifyAuth, async (req, res) => {
 
   try {
     const updatePayload = {
+      user_id: userId,
       name,
       bio,
       department,
@@ -102,8 +103,7 @@ router.put("/:userId", verifyAuth, async (req, res) => {
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
-      .update(updatePayload)
-      .eq("user_id", userId)
+      .upsert(updatePayload, { onConflict: "user_id" })
       .select();
 
     if (profileError) {
@@ -184,11 +184,16 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
       })
       .eq("user_id", userId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       console.error(`[POST /profiles/${userId}/personality] Supabase Error:`, error);
       return res.status(500).json({ error: error.message });
+    }
+
+    if (!data) {
+      console.warn(`[POST /profiles/${userId}/personality] Profile not found for user:`, userId);
+      return res.status(404).json({ error: "Profile not found to update." });
     }
 
     console.log(`[POST /profiles/${userId}/personality] Success. Profile updated.`);

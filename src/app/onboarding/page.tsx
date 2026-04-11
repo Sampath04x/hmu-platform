@@ -25,14 +25,19 @@ const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Media", "Literature
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(() => {
-    if (typeof window !== "undefined") {
-      const saved = sessionStorage.getItem("onboarding_step");
-      return saved ? parseInt(saved, 10) : 1;
+  const [step, setStep] = useState(1);
+
+  // Restore step from sessionStorage after hydration (client-only)
+  useEffect(() => {
+    const saved = sessionStorage.getItem("onboarding_step");
+    if (saved) {
+      const parsed = parseInt(saved, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 4) {
+        setStep(parsed);
+      }
     }
-    return 1;
-  });
-  
+  }, []);
+
   useEffect(() => {
     sessionStorage.setItem("onboarding_step", step.toString());
   }, [step]);

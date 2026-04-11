@@ -102,7 +102,9 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
       onComplete();
     } catch (err: any) {
       console.error("[PersonalityPrompt] Error in finishProfile:", err);
-      toast.error(err.message || "Failed to save personality data");
+      toast.error(err.message || "Failed to save personality data. Please try again.");
+      setStep(0);
+      setResponses({});
       setIsFinishing(false);
     }
   };
