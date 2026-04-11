@@ -157,11 +157,16 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
   const { userId } = req.params;
   const { responses } = req.body; // e.g. { q1: 'Introvert', q2: 'Practical' }
 
+  console.log(`[POST /profiles/${userId}/personality] Received request`);
+  console.log("Responses:", responses);
+
   if (req.user.id !== userId) {
+    console.warn(`[POST /profiles/${userId}/personality] Access denied. req.user.id (${req.user.id}) !== userId (${userId})`);
     return res.status(403).json({ error: "Access denied" });
   }
 
   try {
+    console.log(`[POST /profiles/${userId}/personality] Updating Supabase...`);
     const { data, error } = await supabase
       .from("profiles")
       .update({
@@ -172,10 +177,15 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
       .select()
       .single();
 
-    if (error) return res.status(500).json({ error: error.message });
+    if (error) {
+      console.error(`[POST /profiles/${userId}/personality] Supabase Error:`, error);
+      return res.status(500).json({ error: error.message });
+    }
 
+    console.log(`[POST /profiles/${userId}/personality] Success. Profile updated.`);
     res.json({ message: "Character profile built!", profile: data });
   } catch (error) {
+    console.error(`[POST /profiles/${userId}/personality] Catch Error:`, error);
     res.status(500).json({ error: error.message });
   }
 });

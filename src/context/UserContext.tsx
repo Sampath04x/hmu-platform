@@ -34,6 +34,7 @@ interface UserContextType {
   setIsLoggedIn: (val: boolean) => void;
   token: string | null;
   setToken: (val: string | null) => void;
+  isAuthLoading: boolean;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -49,6 +50,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [aiProfile, setAiProfile] = useState<AiProfile | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState<string | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -87,20 +89,26 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
     let subscription: any;
     const initializeAuth = async () => {
-      const { supabase } = await import("@/lib/supabase");
-      const { data: { session } } = await supabase.auth.getSession();
-      const currentToken = session?.access_token || null;
-      setToken(currentToken);
-      await checkUser(currentToken);
+      try {
+        const { supabase } = await import("@/lib/supabase");
+        const { data: { session } } = await supabase.auth.getSession();
+        const currentToken = session?.access_token || null;
+        setToken(currentToken);
+        await checkUser(currentToken);
 
-      const { data: authListener } = supabase.auth.onAuthStateChange(
-        async (event, newSession) => {
-          const newToken = newSession?.access_token || null;
-          setToken(newToken);
-          await checkUser(newToken);
-        }
-      );
-      subscription = authListener.subscription;
+        const { data: authListener } = supabase.auth.onAuthStateChange(
+          async (event, newSession) => {
+            const newToken = newSession?.access_token || null;
+            setToken(newToken);
+            if (newToken !== currentToken) {
+               await checkUser(newToken);
+            }
+          }
+        );
+        subscription = authListener.subscription;
+      } finally {
+        setIsAuthLoading(false);
+      }
     };
 
     initializeAuth();
@@ -129,7 +137,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       interests, setInterests,
       aiProfile, setAiProfile,
       isLoggedIn, setIsLoggedIn,
-      token, setToken
+      token, setToken,
+      isAuthLoading
     }}>
       {children}
     </UserContext.Provider>

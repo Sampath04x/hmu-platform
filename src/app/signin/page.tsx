@@ -37,26 +37,42 @@ export default function SigninPage() {
     }
 
     try {
+      console.log(`Starting signin process for: ${formData.email} in mode: ${authMode}`);
+      
       if (authMode === "password") {
         if (!formData.password) throw new Error("Please enter your password.");
+        console.log("Signing in with password...");
         const { data, error: authError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
         });
-        if (authError) throw authError;
+        
+        if (authError) {
+          console.error("Password signin error:", authError);
+          throw authError;
+        }
 
         if (data?.session) {
-          router.push("/");
+          console.log("Signin successful. Redirecting to home...");
+          router.push("/home"); // Fixed: redirected to /home instead of /
         }
       } else {
         // OTP Mode
+        console.log("Sending OTP to:", formData.email);
         const { error: authError } = await supabase.auth.signInWithOtp({
           email: formData.email,
         });
-        if (authError) throw authError;
-        router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=magiclink`);
+        
+        if (authError) {
+          console.error("OTP send error:", authError);
+          throw authError;
+        }
+        
+        console.log("OTP sent. Redirecting to /verify...");
+        router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=email`);
       }
     } catch (err: any) {
+      console.error("Signin process failed:", err);
       setError(err.message || "Invalid login credentials.");
     } finally {
       setLoading(false);

@@ -18,7 +18,7 @@ interface RequestOptions extends RequestInit {
   requireAuth?: boolean;
 }
 
-export const apiFetch = async (endpoint: string, options: RequestOptions = {}) => {
+export const apiFetch = async (endpoint: string, options: RequestOptions & { token?: string | null } = {}) => {
   const url = `${getApiUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const headers = new Headers(options.headers);
 
@@ -29,16 +29,19 @@ export const apiFetch = async (endpoint: string, options: RequestOptions = {}) =
 
   // Add auth token if required
   if (options.requireAuth !== false) {
-    const token = await getAuthToken();
+    // Use the provided token if available, otherwise fetch from session
+    const token = options.token || await getAuthToken();
     if (token) {
       headers.set('Authorization', `Bearer ${token}`);
     }
   }
 
+  console.log(`[apiFetch] Requesting: ${url}`);
   const response = await fetch(url, {
     ...options,
     headers,
   });
+  console.log(`[apiFetch] Response status for ${endpoint}: ${response.status}`);
 
   if (!response.ok) {
     let errorMsg = 'An error occurred during the API request.';

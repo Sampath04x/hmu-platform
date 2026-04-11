@@ -127,15 +127,23 @@ router.post("/initialize-profile", async (req, res) => {
 // CHECK USERNAME AVAILABILITY
 router.get("/check-username/:username", async (req, res) => {
   const { username } = req.params;
+  console.log(`Checking availability for username: ${username}`);
   try {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("profiles")
       .select("username")
       .eq("username", username.toLowerCase())
-      .single();
+      .maybeSingle();
 
+    if (error) {
+      console.error("Username check query error:", error);
+      return res.json({ available: true });
+    }
+
+    console.log(`Username ${username} available: ${!data}`);
     res.json({ available: !data });
   } catch (error) {
+    console.error("Username check catch error:", error);
     res.json({ available: true }); // Assume available if error (e.g. not found)
   }
 });
@@ -155,7 +163,7 @@ router.get("/me", async (req, res) => {
       .from("profiles")
       .select("*")
       .eq("user_id", user.id)
-      .single();
+      .maybeSingle();
 
     res.json({ user, profile });
   } catch (error) {

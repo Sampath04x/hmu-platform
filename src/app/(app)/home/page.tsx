@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/apiClient";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,71 +12,145 @@ import { useUser } from "@/context/UserContext";
 import { PersonalityPrompt } from "@/components/PersonalityPrompt";
 
 export default function HomePage() {
-  const { user_id, has_completed_personality, setHasCompletedPersonality, role } = useUser();
+  const { user_id, has_completed_personality, setHasCompletedPersonality, role, isAuthLoading } = useUser();
   const [activeTab, setActiveTab] = useState("All");
   const [isFabOpen, setIsFabOpen] = useState(false);
-  const [postTag, setPostTag] = useState("");
-  const showPersonalityPrompt = !has_completed_personality;
+  const [postTag, setPostTag] = useState("QUESTION"); // Default to Question
+  const [postContent, setPostContent] = useState("");
+  const [isPosting, setIsPosting] = useState(false);
+  const [posts, setPosts] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [postTitle, setPostTitle] = useState("");
+  
+  // New States for Interactions
+  const [postComments, setPostComments] = useState<Record<string, any[]>>({});
+  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+
+  const showPersonalityPrompt = !isAuthLoading && !has_completed_personality;
   const tabs = ["All", "Events", "Questions", "Tips", "Utility", "Opinions"];
   const canPostMedia = role === 'club' || role === 'super_admin' || role === 'founder';
 
-  const posts = [
-    {
-      id: 1,
-      author: "Priya S.",
-      dept: "CSE",
-      year: "3rd Year",
-      tag: "TIP",
-      time: "2h ago",
-      content: "The Sarvana Bhavan near gate 2 is genuinely the best thing on this campus. The dosa is worth the 10 min walk. You're welcome.",
-      likes: 45,
-      comments: 12
-    },
-    {
-      id: 2,
-      author: "Arjun K.",
-      dept: "Mechanical",
-      year: "2nd Year",
-      tag: "QUESTION",
-      time: "4h ago",
-      content: "Does anyone actually use the library or is it just for the photos?",
-      likes: 128,
-      comments: 67
-    },
-    {
-      id: 3,
-      author: "Photography Club",
-      dept: "Media",
-      year: "Verified",
-      tag: "EVENT",
-      time: "5h ago",
-      content: "Photography Club is doing a campus photowalk this Saturday 6am. Limited spots. RSVP below.",
-      likes: 89,
-      comments: 34
-    },
-    {
-      id: 4,
-      author: "Riya M.",
-      dept: "ECE",
-      year: "4th Year",
-      tag: "UTILITY",
-      time: "8h ago",
-      content: "Prof Sharma's ML class — attendance is strict but the notes are actually incredible. Don't bunk, just go.",
-      likes: 312,
-      comments: 8
-    },
-    {
-      id: 5,
-      author: "Dev V.",
-      dept: "Civil",
-      year: "1st Year",
-      tag: "OPINION",
-      time: "1d ago",
-      content: "Hot take: the 9am slots should be illegal. Nobody is learning anything. Change my mind.",
-      likes: 890,
-      comments: 156
+  const fetchPosts = async () => {
+    try {
+      setIsLoading(true);
+      // Pass userId to get user_has_liked status
+      const data = await apiFetch(`/posts?userId=${user_id || ''}`);
+      if (data && data.posts) {
+        setPosts(data.posts);
+      }
+    } catch (error) {
+      console.error("Failed to fetch posts:", error);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    fetchPosts();
+  }, [user_id]);
+
+  const handleCreatePost = async () => {
+    if (!postContent.trim() || !postTag) return;
+
+    try {
+      setIsPosting(true);
+      const response = await apiFetch("/posts", {
+        method: "POST",
+        body: JSON.stringify({
+          content: postContent,
+          post_type: postTag,
+          title: postTitle || "New Post"
+        }),
+      });
+
+      if (response && response.post) {
+        setPostContent("");
+        setPostTitle("");
+        setIsFabOpen(false);
+        fetchPosts(); // Refresh feed
+      }
+    } catch (error) {
+      console.error("Failed to create post:", error);
+      alert("Failed to create post. Please try again.");
+    } finally {
+      setIsPosting(false);
+    }
+  };
+
+  const handleLike = async (postId: string) => {
+    // Optimistic Update
+    setPosts(prev => prev.map(p => {
+      if (p.id === postId) {
+        const isLiked = p.user_has_liked;
+        return {
+          ...p,
+          user_has_liked: !isLiked,
+          likes_count: (p.likes_count || 0) + (isLiked ? -1 : 1)
+        };
+      }
+      return p;
+    }));
+
+    try {
+      await apiFetch(`/posts/${postId}/like`, { method: 'POST' });
+    } catch (error) {
+      console.error("Failed to like post:", error);
+      // Rollback if failed
+      fetchPosts();
+    }
+  };
+
+  const toggleComments = async (postId: string) => {
+    const isExpanded = expandedComments.has(postId);
+    const newExpanded = new Set(expandedComments);
+    
+    if (isExpanded) {
+      newExpanded.delete(postId);
+    } else {
+      newExpanded.add(postId);
+      // Fetch data if not already fetched
+      if (!postComments[postId]) {
+        fetchComments(postId);
+      }
+    }
+    setExpandedComments(newExpanded);
+  };
+
+  const fetchComments = async (postId: string) => {
+    try {
+      setCommentLoading(prev => ({ ...prev, [postId]: true }));
+      const data = await apiFetch(`/comments/${postId}`);
+      setPostComments(prev => ({ ...prev, [postId]: data || [] }));
+    } catch (error) {
+      console.error("Failed to fetch comments:", error);
+    } finally {
+      setCommentLoading(prev => ({ ...prev, [postId]: false }));
+    }
+  };
+
+  const handleAddComment = async (postId: string) => {
+    const text = commentInputs[postId];
+    if (!text?.trim()) return;
+
+    try {
+      const response = await apiFetch("/comments", {
+        method: "POST",
+        body: JSON.stringify({ postId, comment: text })
+      });
+
+      if (response && response.comment) {
+        setCommentInputs(prev => ({ ...prev, [postId]: "" }));
+        fetchComments(postId); // Refresh comment list
+        // Update comment count locally
+        setPosts(prev => prev.map(p => p.id === postId ? { ...p, post_comments: [{ count: (p.post_comments?.[0]?.count || 0) + 1 }] } : p));
+      }
+    } catch (error) {
+      console.error("Failed to add comment:", error);
+      alert("Failed to add comment.");
+    }
+  };
 
   const getTagColor = (tag: string) => {
     switch (tag) {
@@ -88,7 +163,7 @@ export default function HomePage() {
     }
   };
 
-  const filteredPosts = activeTab === "All" ? posts : posts.filter(p => p.tag === activeTab.toUpperCase().replace(/S$/, ''));
+  const filteredPosts = activeTab === "All" ? posts : posts.filter(p => p.post_type === activeTab.toUpperCase().replace(/S$/, ''));
 
   return (
     <div className="min-h-screen bg-background relative flex flex-col md:flex-row">
@@ -165,20 +240,33 @@ export default function HomePage() {
             )}
           </div>
 
-          {filteredPosts.map((post) => (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div className="w-10 h-10 border-4 border-brand border-t-transparent rounded-full animate-spin mb-4"></div>
+              <p>Loading your campus pulse...</p>
+            </div>
+          ) : filteredPosts.length === 0 ? (
+            <div className="text-center py-20 text-muted-foreground">
+              <p>No posts yet. Be the first to post something!</p>
+            </div>
+          ) : filteredPosts.map((post) => (
             <Card key={post.id} className="p-4 sm:p-5 bg-card border-border/50 glow-hover">
               <div className="flex gap-3 mb-3">
                 <Avatar className="w-10 h-10 border border-border">
-                  <AvatarFallback className="bg-muted text-muted-foreground font-semibold">{post.author[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
+                    {(post.profiles?.name || "U")[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold text-white text-sm">{post.author}</h4>
-                      <p className="text-xs text-muted-foreground">{post.dept} &middot; {post.year}</p>
+                      <h4 className="font-semibold text-white text-sm">{post.profiles?.name || "Student"}</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {post.profiles?.department || "General"} &middot; {post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member"}
+                      </p>
                     </div>
-                    <Badge className={getTagColor(post.tag)} variant="outline">
-                      {post.tag}
+                    <Badge className={getTagColor(post.post_type)} variant="outline">
+                      {post.post_type}
                     </Badge>
                   </div>
                 </div>
@@ -189,24 +277,87 @@ export default function HomePage() {
               </p>
               
               <div className="flex items-center gap-6 ml-[52px] text-muted-foreground">
-                <button className="flex items-center gap-1.5 text-xs font-medium hover:text-brand transition-colors group">
-                  <div className="p-1.5 rounded-full group-hover:bg-brand/10 transition-colors">
-                    <ThumbsUpIcon className="w-4 h-4" />
+                <button 
+                  onClick={() => handleLike(post.id)}
+                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${post.user_has_liked ? 'text-brand' : 'hover:text-brand'}`}
+                >
+                  <div className={`p-1.5 rounded-full transition-colors ${post.user_has_liked ? 'bg-brand/10' : 'group-hover:bg-brand/10'}`}>
+                    <ThumbsUpIcon className={`w-4 h-4 ${post.user_has_liked ? 'fill-brand text-brand' : ''}`} />
                   </div>
-                  {post.likes}
+                  {post.likes_count || 0}
                 </button>
-                <button className="flex items-center gap-1.5 text-xs font-medium hover:text-accent transition-colors group">
-                  <div className="p-1.5 rounded-full group-hover:bg-accent/10 transition-colors">
+                <button 
+                  onClick={() => toggleComments(post.id)}
+                  className={`flex items-center gap-1.5 text-xs font-medium transition-colors group ${expandedComments.has(post.id) ? 'text-accent' : 'hover:text-accent'}`}
+                >
+                  <div className={`p-1.5 rounded-full transition-colors ${expandedComments.has(post.id) ? 'bg-accent/10' : 'group-hover:bg-accent/10'}`}>
                     <MessageCircleIcon className="w-4 h-4" />
                   </div>
-                  {post.comments}
+                  {post.post_comments?.[0]?.count || 0}
                 </button>
                 <div className="flex-1"></div>
-                <div className="text-xs">{post.time}</div>
+                <div className="text-xs">{new Date(post.created_at).toLocaleDateString()}</div>
                 <button className="p-1.5 rounded-full hover:bg-muted hover:text-white transition-colors">
                   <BookmarkIcon className="w-4 h-4" />
                 </button>
               </div>
+
+              {/* Comment Section */}
+              {expandedComments.has(post.id) && (
+                <div className="mt-4 ml-[52px] space-y-4 pt-4 border-t border-border/40 animate-in slide-in-from-top-2 duration-200">
+                  <div className="flex gap-2">
+                    <Avatar className="w-8 h-8 border border-border">
+                      <AvatarFallback className="bg-muted text-[10px] text-muted-foreground">ME</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 flex gap-2">
+                       <input 
+                        type="text" 
+                        placeholder="Add a comment..."
+                        value={commentInputs[post.id] || ""}
+                        onChange={(e) => setCommentInputs(prev => ({ ...prev, [post.id]: e.target.value }))}
+                        onKeyDown={(e) => e.key === 'Enter' && handleAddComment(post.id)}
+                        className="flex-1 bg-muted/30 border border-border/50 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-brand/40 transition-colors"
+                       />
+                       <Button 
+                        size="sm" 
+                        onClick={() => handleAddComment(post.id)}
+                        disabled={!commentInputs[post.id]?.trim()}
+                        className="bg-brand hover:opacity-90 h-8 px-4 text-xs font-bold"
+                       >
+                        Post
+                       </Button>
+                    </div>
+                  </div>
+
+                  {commentLoading[post.id] ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-4 h-4 border-2 border-brand border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  ) : postComments[post.id]?.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No comments yet. Start the conversation!</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* @ts-ignore */}
+                      {postComments[post.id]?.map((comment) => (
+                        <div key={comment.id} className="flex gap-3">
+                          <Avatar className="w-7 h-7 border border-border">
+                            <AvatarFallback className="bg-muted text-[9px] text-muted-foreground">
+                              {comment.profiles?.name?.[0] || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="bg-muted/20 rounded-xl p-2 px-3">
+                              <h5 className="text-[11px] font-bold text-white/90">{comment.profiles?.name || "Anonymous"}</h5>
+                              <p className="text-sm text-foreground/90">{comment.comment}</p>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground ml-2">Just now</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </Card>
           ))}
         </div>
@@ -248,6 +399,8 @@ export default function HomePage() {
 
               <Textarea 
                 placeholder="What's on your mind?" 
+                value={postContent}
+                onChange={(e) => setPostContent(e.target.value)}
                 className="min-h-[150px] bg-background border-none focus-visible:ring-0 text-base resize-none placeholder:text-muted-foreground"
               />
 
@@ -269,12 +422,12 @@ export default function HomePage() {
                 </button>
                 <Button 
                   className={`px-6 rounded-xl font-semibold ${
-                    postTag ? 'bg-brand hover:opacity-90 text-white' : 'bg-muted text-muted-foreground cursor-not-allowed'
+                    postTag && postContent.trim() ? 'bg-brand hover:opacity-90 text-white' : 'bg-muted text-muted-foreground cursor-not-allowed'
                   }`}
-                  disabled={!postTag}
-                  onClick={() => setIsFabOpen(false)}
+                  disabled={!postTag || !postContent.trim() || isPosting}
+                  onClick={handleCreatePost}
                 >
-                  Post
+                  {isPosting ? 'Posting...' : 'Post'}
                 </Button>
               </div>
             </div>

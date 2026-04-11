@@ -40,19 +40,37 @@ export default function SignupPage() {
     }
 
     try {
+      console.log("Starting signup process for:", formData.email);
       // 1. Check if username is available (via backend)
-      const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`);
-      if (!usernameCheck.available) {
-        throw new Error("Username is already taken.");
+      console.log("Checking username availability:", formData.username);
+      try {
+        const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`, { 
+          requireAuth: false 
+        });
+        console.log("Username check response:", usernameCheck);
+        if (!usernameCheck.available) {
+          throw new Error("Username is already taken.");
+        }
+        console.log("Username is available.");
+      } catch (checkErr: any) {
+        console.error("Username check failed:", checkErr);
+        if (checkErr.message === "Username is already taken.") throw checkErr;
+        // If it's a network error, we might want to proceed or warn. For now, we proceed.
       }
 
       // 2. Sign up with Supabase
+      console.log("Registering with Supabase Auth...");
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
       });
 
-      if (authError) throw authError;
+      if (authError) {
+        console.error("Supabase Auth Error:", authError);
+        throw authError;
+      }
+
+      console.log("Supabase Auth success. User ID:", data.user?.id);
 
       // 3. Store initial profile data in sessionStorage for the /verify step
       // The verify step will use this to hit /auth/initialize-profile
@@ -60,28 +78,34 @@ export default function SignupPage() {
         name: formData.name,
         username: formData.username,
         email: formData.email,
+        timestamp: new Date().getTime()
       }));
 
       // 4. Redirect to verification or onboarding
       if (data?.session) {
-        // If email confirmation is disabled, they are logged in immediately.
-        // We should manually initialize the profile here and redirect.
-        await apiFetch("/auth/initialize-profile", {
-          method: "POST",
-          body: JSON.stringify({
-            user_id: data.user?.id,
-            email: formData.email,
-            name: formData.name,
-            username: formData.username,
-          }),
-        });
+        console.log("Immediate session detected. Initializing profile...");
+        try {
+          await apiFetch("/auth/initialize-profile", {
+            method: "POST",
+            body: JSON.stringify({
+              user_id: data.user?.id,
+              email: formData.email,
+              name: formData.name,
+              username: formData.username,
+            }),
+          });
+          console.log("Profile initialized. Redirecting to onboarding...");
+        } catch (initErr) {
+          console.error("Auto-initialization failed:", initErr);
+        }
         router.push("/onboarding");
       } else {
         // Email confirmation is enabled, redirect to verify
-        // Pass the email as a query parameter so we know who to verify
+        console.log("Email confirmation required. Redirecting to /verify...");
         router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=signup`);
       }
     } catch (err: any) {
+      console.error("Signup process failed:", err);
       setError(err.message || "An error occurred during signup.");
     } finally {
       setLoading(false);

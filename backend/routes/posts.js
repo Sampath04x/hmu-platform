@@ -7,18 +7,36 @@ const router = express.Router();
 
 // GET all posts with pagination
 router.get("/", async (req, res) => {
-  const { limit = 20, offset = 0 } = req.query;
+  const { limit = 20, offset = 0, userId } = req.query;
 
   try {
-    const { data, error, count } = await supabase
+    // 1. Fetch posts with counts and author info
+    const { data: posts, error, count } = await supabase
       .from("posts")
-      .select("*, profiles!user_id(name, profile_image_url), post_comments(count), post_likes(count)", { count: 'exact' })
+      .select("*, profiles!user_id(name, profile_image_url, department, year_of_study), post_comments(count), post_likes(count)", { count: 'exact' })
       .order("created_at", { ascending: false })
-      .range(offset, parseInt(offset) + parseInt(limit) - 1);
+      .range(Number(offset), Number(offset) + Number(limit) - 1);
 
     if (error) return res.status(500).json({ error: error.message });
 
-    res.json({ posts: data, total: count });
+    // 2. If userId is provided, check if this user has liked each post
+    let enrichedPosts = posts;
+    if (userId) {
+      const postIds = posts.map(p => p.id);
+      const { data: userLikes } = await supabase
+        .from('post_likes')
+        .select('post_id')
+        .eq('user_id', userId)
+        .in('post_id', postIds);
+      
+      const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
+      enrichedPosts = posts.map(p => ({
+        ...p,
+        user_has_liked: likedPostIds.has(p.id)
+      }));
+    }
+
+    res.json({ posts: enrichedPosts, total: count });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

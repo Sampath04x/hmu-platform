@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Brain, Compass, Users, ChevronRight, Zap } from "lucide-react";
+import { Sparkles, Brain, Compass, Users, ChevronRight, Zap, Coffee } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { apiFetch } from "@/lib/apiClient";
 import { toast } from "sonner";
@@ -47,6 +47,22 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
   const [responses, setResponses] = useState<any>({});
   const [isFinishing, setIsFinishing] = useState(false);
 
+  // Load from localStorage on mount
+  useEffect(() => {
+    const savedStep = localStorage.getItem("personality_step");
+    const savedResponses = localStorage.getItem("personality_responses");
+    if (savedStep) setStep(parseInt(savedStep));
+    if (savedResponses) setResponses(JSON.parse(savedResponses));
+  }, []);
+
+  // Save to localStorage whenever progress changes
+  useEffect(() => {
+    if (step > 0) localStorage.setItem("personality_step", step.toString());
+    if (Object.keys(responses).length > 0) {
+      localStorage.setItem("personality_responses", JSON.stringify(responses));
+    }
+  }, [step, responses]);
+
   const handleSelect = (value: string) => {
     const newResponses = { ...responses, [QUESTIONS[step].id]: value };
     setResponses(newResponses);
@@ -59,16 +75,34 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
   };
 
   const finishProfile = async (finalResponses: any) => {
+    console.log("[PersonalityPrompt] finishing profile for user:", user_id);
+    console.log("[PersonalityPrompt] final responses:", finalResponses);
     setIsFinishing(true);
     try {
-      await apiFetch(`/profiles/${user_id}/personality`, {
+      if (!user_id) {
+        console.error("[PersonalityPrompt] No user_id provided!");
+        toast.error("User ID not found. Please log in again.");
+        setIsFinishing(false);
+        return;
+      }
+
+      console.log("[PersonalityPrompt] calling apiFetch...");
+      const result = await apiFetch(`/profiles/${user_id}/personality`, {
         method: "POST",
         body: JSON.stringify({ responses: finalResponses })
       });
+      console.log("[PersonalityPrompt] apiFetch result:", result);
+
+      // Clear persistence on success
+      localStorage.removeItem("personality_step");
+      localStorage.removeItem("personality_responses");
+
       toast.success("Character Profile Built!");
+      console.log("[PersonalityPrompt] calling onComplete()");
       onComplete();
-    } catch (err) {
-      toast.error("Failed to save personality data");
+    } catch (err: any) {
+      console.error("[PersonalityPrompt] Error in finishProfile:", err);
+      toast.error(err.message || "Failed to save personality data");
       setIsFinishing(false);
     }
   };
@@ -160,4 +194,3 @@ export function usePersonalityGuard(profile: any) {
   return { show, setShow };
 }
 
-import { Coffee } from "lucide-react"; 

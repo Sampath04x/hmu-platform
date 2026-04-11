@@ -53,7 +53,7 @@ function VerifyContent() {
     }
 
     try {
-      console.log(`Verifying OTP for ${email} with type ${verifyType}...`);
+      console.log(`Verifying OTP for ${email} with type "${verifyType}" and token "${otp}"...`);
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -61,20 +61,30 @@ function VerifyContent() {
       });
 
       if (verifyError) {
-        console.error("Verification error:", verifyError);
+        console.error("Supabase verification error details:", {
+          message: verifyError.message,
+          status: verifyError.status,
+          name: verifyError.name
+        });
         throw verifyError;
       }
 
       console.log("OTP verified successfully. Checking profile status...");
+      
+      const session = data.session;
+      const accessToken = session?.access_token;
 
-      // 4. Initialize profile in backend if signing up
+      // 4. Initialize profile in backend if explicitly signing up
       const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
-      if (pendingProfileStr) {
-        console.log("Found pending profile, initializing...");
+      
+      // We only initialize if it's a signup flow AND we have pending data
+      if (verifyType === 'signup' && pendingProfileStr) {
+        console.log("Signup flow detected with pending profile, initializing...");
         try {
           const profileInfo = JSON.parse(pendingProfileStr);
           await apiFetch("/auth/initialize-profile", {
             method: "POST",
+            token: accessToken, // Use fresh token
             body: JSON.stringify({
               user_id: data.user?.id,
               email: data.user?.email,
@@ -82,31 +92,52 @@ function VerifyContent() {
               username: profileInfo.username,
             }),
           });
-          sessionStorage.removeItem("intrst_pending_profile");
-          console.log("Profile initialized. Redirecting to onboarding...");
-          router.push("/onboarding");
-          return;
+          console.log("Profile initialized.");
         } catch (initError) {
           console.error("Failed to initialize profile:", initError);
-          // Fall through to check existing profile
         }
       }
 
-      // Check if user already has a profile
+      // Always clear the pending profile once verification is attempted
+      sessionStorage.removeItem("intrst_pending_profile");
+
+      // Small delay to ensure Supabase auth state has propagated if needed 
+      // though we are passing the token explicitly now.
+      await new Promise(resolve => setTimeout(resolve, 300));
+
+      // 5. Check profile status to determine redirection
       try {
-        console.log("Fetching current profile status...");
-        const meData = await apiFetch("/auth/me");
-        if (meData?.profile) {
-          console.log("Profile exists. Redirecting to home...");
-          router.push("/home");
+        console.log("Fetching current profile status with fresh token...");
+        const meData = await apiFetch("/auth/me", { token: accessToken });
+        
+        console.log("Me data received:", { 
+          hasProfile: !!meData?.profile,
+          dept: meData?.profile?.department,
+          year: meData?.profile?.year_of_study 
+        });
+
+        // Determine if onboarding is truly needed
+        const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
+        
+        // If it's a sign-in flow (verifyType is email/magiclink), try to go home by default
+        // unless they are missing a profile entirely.
+        const isSigninFlow = verifyType === "email" || verifyType === "magiclink";
+
+        if (hasCompletedOnboarding || isSigninFlow) {
+          console.log(`Redirecting to home (onboarding completed: ${hasCompletedOnboarding}, isSignin: ${isSigninFlow})...`);
+          router.replace("/home");
         } else {
-          console.log("No profile found. Redirecting to onboarding...");
-          router.push("/onboarding");
+          console.log("Incomplete profile. Redirecting to onboarding...");
+          router.replace("/onboarding");
         }
       } catch (meError) {
-        console.error("Failed to fetch profile info:", meError);
-        // Default to onboarding if we can't be sure
-        router.push("/onboarding");
+        console.error("Failed to fetch profile info during verification:", meError);
+        // Fallback to home if it's a sign-in, onboarding otherwise
+        if (verifyType === "email" || verifyType === "magiclink") {
+          router.replace("/home");
+        } else {
+          router.replace("/onboarding");
+        }
       }
 
     } catch (err: any) {
@@ -121,13 +152,27 @@ function VerifyContent() {
     setResendLoading(true);
     setError(null);
     try {
-      const { error } = await supabase.auth.resend({
-        type: verifyType,
-        email,
-      });
-      if (error) throw error;
+      console.log(`Attempting to resend OTP for ${email} with type ${verifyType}...`);
+      
+      let resendError;
+      
+      if (verifyType === "email" || verifyType === "magiclink") {
+        // For login OTP or magiclink, we call signInWithOtp again
+        const { error } = await supabase.auth.signInWithOtp({ email });
+        resendError = error;
+      } else {
+        // For signup, we use resend
+        const { error } = await supabase.auth.resend({
+          type: verifyType,
+          email,
+        });
+        resendError = error;
+      }
+
+      if (resendError) throw resendError;
       alert("A new code has been sent!");
     } catch (err: any) {
+      console.error("Resend failed:", err);
       setError(err.message || "Failed to resend code.");
     } finally {
       setResendLoading(false);
