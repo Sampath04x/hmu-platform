@@ -1,7 +1,7 @@
 import express from "express";
 import supabase from "../config/supabase.js";
 import { verifyAuth } from "../utils/auth.js";
-import { trackActivity, hasReachedDailyLimit } from "../utils/activity.js";
+import { trackActivity, hasReachedDailyLimit, removeActivityPoints } from "../utils/activity.js";
 
 const router = express.Router();
 

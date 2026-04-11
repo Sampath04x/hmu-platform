@@ -12,8 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { apiFetch } from "@/lib/apiClient";
+import { useUser } from "@/context/UserContext";
 
 export default function CanteensPage() {
+  const { role: currentUserRole } = useUser();
   const [canteens, setCanteens] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [isLoading, setIsLoading] = useState(true);
@@ -72,52 +74,13 @@ export default function CanteensPage() {
         </div>
       </div>
 
-      {/* Featured Insight Card */}
-      <Card className="rounded-[3rem] bg-gradient-to-br from-brand/20 to-accent/10 border-brand/20 overflow-hidden relative group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brand/10 rounded-full blur-[100px] -mr-32 -mt-32"></div>
-          <CardContent className="p-10 md:p-16 flex flex-col md:flex-row items-center gap-12 relative z-10">
-             <div className="flex-1 space-y-8">
-                <div className="flex items-center gap-4 text-brand font-bold uppercase tracking-[0.2em] text-sm">
-                   <TrendingUp className="w-6 h-6" /> Trending Highlight
-                </div>
-                <h2 className="text-4xl md:text-5xl font-dmserif leading-tight">
-                  &quot;V-Shop Biryani is back to its glory days. Get there before 1:30 PM.&quot;
-                </h2>
-                <div className="flex items-center gap-4 pt-4 border-t border-brand/20 max-w-sm">
-                   <Avatar className="w-12 h-12 border border-brand/20">
-                      <AvatarFallback className="bg-brand text-white font-bold font-dmserif italic">S</AvatarFallback>
-                   </Avatar>
-                   <div>
-                      <div className="font-bold text-white">Student Review</div>
-                      <div className="text-sm text-brand/80">35 minutes ago</div>
-                   </div>
-                </div>
-             </div>
-             <div className="w-full md:w-[40%] bg-card/60 backdrop-blur-xl border border-white/10 rounded-[2rem] p-8 space-y-6">
-                <div className="flex items-center justify-between">
-                   <span className="font-dmserif italic text-2xl">V-Shop Biryani</span>
-                   <Badge className="bg-green-500/20 text-green-400 border-green-500/20 px-3 py-1 text-[10px] font-bold">TOP RATED</Badge>
-                </div>
-                <div className="space-y-4 pt-4">
-                   <div className="flex justify-between items-end">
-                      <span className="text-sm text-muted-foreground uppercase font-bold tracking-widest opacity-60">Avg. Rating</span>
-                      <span className="text-4xl font-dmserif text-brand">4.9/5</span>
-                   </div>
-                   <Progress value={98} className="h-2 bg-white/5" />
-                   <div className="grid grid-cols-2 gap-4 pt-4">
-                      <div className="bg-white/5 p-4 rounded-2xl text-center border border-white/5">
-                         <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Queue</div>
-                         <div className="font-bold text-rose-400">High</div>
-                      </div>
-                      <div className="bg-white/5 p-4 rounded-2xl text-center border border-white/5">
-                         <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">Stock</div>
-                         <div className="font-bold text-green-400">Available</div>
-                      </div>
-                   </div>
-                </div>
-             </div>
-          </CardContent>
-      </Card>
+      {currentUserRole === 'super_admin' || currentUserRole === 'founder' || currentUserRole === 'moderator' ? (
+        <div className="flex justify-end mt-4">
+          <Button className="bg-brand text-white hover:bg-accent font-bold gap-2 rounded-xl">
+            + Add Canteen
+          </Button>
+        </div>
+      ) : null}
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">

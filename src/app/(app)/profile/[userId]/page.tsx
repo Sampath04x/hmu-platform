@@ -29,7 +29,7 @@ function formatDate(isoString: string) {
 
 export default function UserProfilePage() {
   const { userId } = useParams();
-  const { user_id: currentUserId } = useUser();
+  const { user_id: currentUserId, role: currentUserRole } = useUser();
   const [profile, setProfile] = useState<any>(null);
   const [events, setEvents] = useState<any[]>([]);
   const [posts, setPosts] = useState<any[]>([]);
@@ -134,9 +134,11 @@ export default function UserProfilePage() {
         {/* CTA Buttons */}
         {!isOwnProfile && (
           <div className="flex gap-3 mt-7 w-full max-w-sm">
-            <Button className="flex-1 h-12 bg-brand hover:opacity-90 text-white font-semibold rounded-xl shadow-[0_0_15px_rgba(194,105,42,0.3)] gap-2">
-              <UserPlusIcon className="w-4 h-4" /> {isClub ? "Follow" : "Connect"}
-            </Button>
+            {currentUserRole !== 'club' && (
+              <Button className="flex-1 h-12 bg-brand hover:opacity-90 text-white font-semibold rounded-xl shadow-[0_0_15px_rgba(194,105,42,0.3)] gap-2">
+                <UserPlusIcon className="w-4 h-4" /> {isClub ? "Follow" : "Connect"}
+              </Button>
+            )}
             <Button variant="outline" className="flex-1 h-12 border-brand/30 text-brand hover:bg-brand/10 rounded-xl gap-2 group">
               <MessageSquareIcon className="w-4 h-4" /> Message
             </Button>

@@ -19,10 +19,21 @@ router.get("/", async (req, res) => {
 
     if (error) return res.status(500).json({ error: error.message });
 
+    // 1.5 Scrub anonymous posts
+    const scrubbedPosts = posts.map(p => {
+      if (p.is_anonymous) {
+        return {
+          ...p,
+          profiles: { name: "Anonymous", profile_image_url: null, department: null, year_of_study: null }
+        };
+      }
+      return p;
+    });
+
     // 2. If userId is provided, check if this user has liked each post
-    let enrichedPosts = posts;
+    let enrichedPosts = scrubbedPosts;
     if (userId) {
-      const postIds = posts.map(p => p.id);
+      const postIds = scrubbedPosts.map(p => p.id);
       const { data: userLikes } = await supabase
         .from('post_likes')
         .select('post_id')
@@ -30,7 +41,7 @@ router.get("/", async (req, res) => {
         .in('post_id', postIds);
       
       const likedPostIds = new Set(userLikes?.map(l => l.post_id) || []);
-      enrichedPosts = posts.map(p => ({
+      enrichedPosts = scrubbedPosts.map(p => ({
         ...p,
         user_has_liked: likedPostIds.has(p.id)
       }));
@@ -44,7 +55,7 @@ router.get("/", async (req, res) => {
 
 // CREATE a post
 router.post("/", verifyAuth, async (req, res) => {
-  const { content, title, media_urls, post_type } = req.body;
+  const { content, title, media_urls, post_type, is_anonymous } = req.body;
   const userId = req.user.id;
 
   if (!content) return res.status(400).json({ error: "Content is required" });
@@ -77,7 +88,8 @@ router.post("/", verifyAuth, async (req, res) => {
         content, 
         title, 
         media_urls, 
-        post_type 
+        post_type,
+        is_anonymous: !!is_anonymous
       }])
       .select()
       .single();

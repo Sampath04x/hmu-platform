@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,18 @@ const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Media", "Literature
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = sessionStorage.getItem("onboarding_step");
+      return saved ? parseInt(saved, 10) : 1;
+    }
+    return 1;
+  });
+  
+  useEffect(() => {
+    sessionStorage.setItem("onboarding_step", step.toString());
+  }, [step]);
+
   const { name, setName, role, interests: selectedTags, setInterests: setSelectedTags, aiProfile, setIsLoggedIn, user_id } = useUser();
   
   const [username, setUsername] = useState("");

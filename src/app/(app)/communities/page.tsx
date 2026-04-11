@@ -35,24 +35,7 @@ export default function CommunitiesPage() {
         <p className="text-muted-foreground">Find where you belong on campus.</p>
         
         {/* Featured: Vacant Classrooms */}
-        <Link href="/communities/vacant-classrooms">
-          <Card className="mt-8 p-6 bg-gradient-to-r from-brand/20 via-brand/10 to-transparent border-brand/30 group hover:border-brand/60 transition-all glow-hover">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-2xl bg-brand flex items-center justify-center shadow-lg shadow-brand/20">
-                  <Building2 className="w-8 h-8 text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-dmserif font-bold text-white group-hover:text-brand transition-colors">Classroom Locator</h2>
-                  <p className="text-muted-foreground text-sm">Find empty rooms to study or chill in real-time.</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 font-semibold text-brand text-sm group-hover:translate-x-1 transition-transform uppercase tracking-wider">
-                Find Room <ChevronRight className="w-5 h-5" />
-              </div>
-            </div>
-          </Card>
-        </Link>
+
       </div>
 
       <div className="relative mb-10 text-white focus-within:text-white group">

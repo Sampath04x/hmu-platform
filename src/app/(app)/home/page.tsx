@@ -20,7 +20,9 @@ export default function HomePage() {
   const [isPosting, setIsPosting] = useState(false);
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+// ... existing code ...
   const [postTitle, setPostTitle] = useState("");
+  const [isAnonymous, setIsAnonymous] = useState(false);
   
   // New States for Interactions
   const [postComments, setPostComments] = useState<Record<string, any[]>>({});
@@ -61,13 +63,15 @@ export default function HomePage() {
         body: JSON.stringify({
           content: postContent,
           post_type: postTag,
-          title: postTitle || "New Post"
+          title: postTitle || "New Post",
+          is_anonymous: isAnonymous
         }),
       });
 
       if (response && response.post) {
         setPostContent("");
         setPostTitle("");
+        setIsAnonymous(false);
         setIsFabOpen(false);
         fetchPosts(); // Refresh feed
       }
@@ -254,15 +258,15 @@ export default function HomePage() {
               <div className="flex gap-3 mb-3">
                 <Avatar className="w-10 h-10 border border-border">
                   <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-                    {(post.profiles?.name || "U")[0]}
+                    {post.is_anonymous ? "A" : ((post.profiles?.name || "U")[0])}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h4 className="font-semibold text-white text-sm">{post.profiles?.name || "Student"}</h4>
+                      <h4 className="font-semibold text-white text-sm">{post.is_anonymous ? "Anonymous" : (post.profiles?.name || "Student")}</h4>
                       <p className="text-xs text-muted-foreground">
-                        {post.profiles?.department || "General"} &middot; {post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member"}
+                        {post.is_anonymous ? "Hidden Identity" : (post.profiles?.department || "General")} &middot; {post.is_anonymous ? "Unknown" : (post.profiles?.year_of_study ? `${post.profiles.year_of_study}${post.profiles.year_of_study === 1 ? 'st' : post.profiles.year_of_study === 2 ? 'nd' : post.profiles.year_of_study === 3 ? 'rd' : 'th'} Year` : "Member")}
                       </p>
                     </div>
                     <Badge className={getTagColor(post.post_type)} variant="outline">
@@ -377,7 +381,7 @@ export default function HomePage() {
           <div className="w-full max-w-lg bg-card border border-border sm:rounded-2xl rounded-t-2xl shadow-2xl safe-area-bottom animate-in slide-in-from-bottom-full sm:slide-in-from-bottom-10 duration-300">
             <div className="flex justify-between items-center p-4 border-b border-border">
               <h3 className="text-lg font-dmserif font-semibold">Create Post</h3>
-              <button onClick={() => setIsFabOpen(false)} className="p-2 text-muted-foreground hover:text-white hover:bg-muted rounded-full transition-colors">
+              <button onClick={() => { setIsFabOpen(false); setIsAnonymous(false); }} className="p-2 text-muted-foreground hover:text-white hover:bg-muted rounded-full transition-colors">
                 <XIcon className="w-5 h-5" />
               </button>
             </div>
@@ -417,8 +421,11 @@ export default function HomePage() {
               </div>
 
               <div className="flex justify-between items-center pt-2">
-                <button className="text-brand text-sm font-medium hover:bg-brand/10 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2">
-                  <LockIcon className="w-4 h-4" /> Anonymous
+                <button 
+                  onClick={() => setIsAnonymous(!isAnonymous)}
+                  className={`text-sm font-medium px-3 py-1.5 rounded-lg transition-colors flex items-center gap-2 ${isAnonymous ? 'bg-brand text-white border border-brand/20' : 'text-brand hover:bg-brand/10'}`}
+                >
+                  <LockIcon className="w-4 h-4" /> {isAnonymous ? 'Posting Anonymously' : 'Anonymous'}
                 </button>
                 <Button 
                   className={`px-6 rounded-xl font-semibold ${

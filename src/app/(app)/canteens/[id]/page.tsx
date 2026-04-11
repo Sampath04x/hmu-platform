@@ -13,7 +13,10 @@ import {
   Send,
   Quote,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  AlertCircle,
+  Trash2,
+  Edit2
 } from "lucide-react";
 import { 
   Card, 
@@ -33,26 +36,32 @@ import { useUser } from "@/context/UserContext";
 export default function CanteenDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  useUser();
+  const { user } = useUser();
   const [canteen, setCanteen] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [review, setReview] = useState("");
   const [rating, setRating] = useState(0);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editForm, setEditForm] = useState<any>({});
+  
+  const canManageCanteen = user?.role === 'super_admin' || user?.role === 'founder' || user?.role === 'junior_moderator' || user?.role === 'moderator';
+
+  const fetchCanteen = async () => {
+    try {
+      const data = await apiFetch(`/canteens/${id}`);
+      setCanteen(data);
+      setEditForm({ name: data.name, description: data.description, location: data.location });
+    } catch (err) {
+      console.error("Failed to fetch canteen:", err);
+      toast.error("Error loading canteen details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchCanteen = async () => {
-      try {
-        const data = await apiFetch(`/canteens/${id}`);
-        setCanteen(data);
-      } catch (err) {
-        console.error("Failed to fetch canteen:", err);
-        toast.error("Error loading canteen details");
-      } finally {
-        setIsLoading(false);
-      }
-    };
     if (id) fetchCanteen();
   }, [id]);
 
@@ -73,15 +82,50 @@ export default function CanteenDetailPage() {
       toast.success("Review submitted! You earned 1 point.");
       setReview("");
       setRating(0);
-      // Refresh canteen data
-      const data = await apiFetch(`/canteens/${id}`);
-      setCanteen(data);
+      fetchCanteen();
     } catch (err: any) {
       toast.error(err.message || "Failed to submit review");
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  const handleDeleteReview = async (reviewId: string) => {
+    if (!confirm("Are you sure you want to delete this review?")) return;
+    try {
+      await apiFetch(`/canteens/review/${reviewId}`, { method: 'DELETE' });
+      toast.success("Review deleted successfully");
+      fetchCanteen();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete review");
+    }
+  };
+
+  const handleDeleteCanteen = async () => {
+    if (!confirm("Are you sure you want to delete this canteen? This action cannot be undone.")) return;
+    try {
+      await apiFetch(`/admin/canteens/${id}`, { method: 'DELETE' });
+      toast.success("Canteen deleted successively");
+      router.push("/canteens");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete canteen");
+    }
+  };
+
+  const handleEditCanteen = async () => {
+    try {
+      await apiFetch(`/admin/canteens/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(editForm),
+      });
+      toast.success("Canteen updated successfully");
+      setIsEditing(false);
+      fetchCanteen();
+    } catch (err: any) {
+      toast.error(err.message || "Failed to update canteen");
+    }
+  };
+
 
   if (isLoading) return <div className="p-20 text-center animate-pulse text-brand font-dmserif italic text-2xl">Loading the truth...</div>;
   if (!canteen) return <div className="p-20 text-center">Canteen not found</div>;
@@ -90,14 +134,28 @@ export default function CanteenDetailPage() {
     <div className="max-w-[1400px] mx-auto p-6 md:p-10 space-y-12 animate-in fade-in duration-700">
       {/* Back Button & Header */}
       <div className="flex flex-col gap-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => router.back()}
-          className="w-fit rounded-full h-12 px-6 group flex items-center gap-3 transition-all hover:bg-brand hover:text-white"
-        >
-          <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
-          Back to Listings
-        </Button>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <Button 
+            variant="ghost" 
+            onClick={() => router.back()}
+            className="w-fit rounded-full h-12 px-6 group flex items-center gap-3 transition-all hover:bg-brand hover:text-white"
+          >
+            <ArrowLeft className="w-5 h-5 transition-transform group-hover:-translate-x-1" />
+            Back to Listings
+          </Button>
+
+          {canManageCanteen && (
+            <div className="flex gap-2">
+              <Button onClick={() => setIsEditing(true)} variant="outline" className="border-brand/40 hover:bg-brand/10">
+                <Edit2 className="w-4 h-4 mr-2" /> Edit Details
+              </Button>
+              <Button onClick={handleDeleteCanteen} variant="destructive">
+                <Trash2 className="w-4 h-4 mr-2" /> Delete
+              </Button>
+            </div>
+          )}
+        </div>
+
 
         <div className="flex flex-col lg:flex-row justify-between gap-12">
           <div className="space-y-6 flex-1">
@@ -116,6 +174,43 @@ export default function CanteenDetailPage() {
               {canteen.description || "The heart of campus dining. Authenticated student reviews and the most accurate menus for this outlet."}
             </p>
           </div>
+
+          {/* Edit Canteen Modal */}
+          {isEditing && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm px-4">
+              <div className="w-full max-w-md bg-card border border-border rounded-xl p-6 shadow-2xl relative">
+                <button onClick={() => setIsEditing(false)} className="absolute top-4 right-4 text-muted-foreground">✖</button>
+                <h3 className="text-xl font-bold mb-4">Edit Canteen</h3>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase text-left block w-full">Name</label>
+                    <input 
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 mt-1"
+                      value={editForm.name || ""}
+                      onChange={e => setEditForm({ ...editForm, name: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase text-left block w-full">Location</label>
+                    <input 
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 mt-1"
+                      value={editForm.location || ""}
+                      onChange={e => setEditForm({ ...editForm, location: e.target.value })}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-muted-foreground uppercase text-left block w-full">Description</label>
+                    <textarea 
+                      className="w-full bg-background border border-border rounded-md px-3 py-2 mt-1 h-20"
+                      value={editForm.description || ""}
+                      onChange={e => setEditForm({ ...editForm, description: e.target.value })}
+                    />
+                  </div>
+                  <Button onClick={handleEditCanteen} className="w-full bg-brand hover:brightness-110">Save Changes</Button>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="w-full lg:w-96 flex flex-col gap-6">
              <Card className="rounded-[2.5rem] bg-card/40 border-border/40 p-8 backdrop-blur-xl">
@@ -232,46 +327,61 @@ export default function CanteenDetailPage() {
               {/* Reviews List */}
               <div className="space-y-6">
                  {canteen.canteen_reviews && canteen.canteen_reviews.length > 0 ? (
-                   canteen.canteen_reviews.map((rev: any) => (
-                     <Card key={rev.id} className="rounded-[2.5rem] bg-card/40 border-border/40 hover:border-brand/20 transition-all p-10 space-y-6 relative group">
-                        <div className="flex items-center justify-between">
-                           <div className="flex items-center gap-4">
-                              <Avatar className="w-14 h-14 border-2 border-brand/10">
-                                 {rev.is_anonymous ? (
-                                   <AvatarFallback className="bg-brand text-white font-dmserif italic font-bold">A</AvatarFallback>
-                                 ) : (
-                                   <>
-                                     <AvatarImage src={rev.profiles?.profile_image_url} />
-                                     <AvatarFallback className="bg-indigo-500/20 text-indigo-400 font-bold uppercase">{rev.profiles?.name?.[0] || '?'}</AvatarFallback>
-                                   </>
-                                 )}
-                              </Avatar>
-                              <div>
-                                 <div className="font-bold text-lg text-white">{rev.is_anonymous ? "Anonymous Student" : rev.profiles?.name}</div>
-                                 <div className="text-sm text-muted-foreground font-medium">{new Date(rev.created_at).toLocaleDateString()}</div>
-                              </div>
-                           </div>
-                           <div className="flex items-center gap-1 bg-brand/10 px-4 py-2 rounded-full border border-brand/20">
-                              <Star className="w-4 h-4 text-brand fill-brand" />
-                              <span className="font-bold text-brand">{rev.rating}</span>
-                           </div>
-                        </div>
-                        <div className="relative">
-                           <Quote className="absolute -left-6 -top-4 w-12 h-12 text-brand/5 rotate-180" />
-                           <p className="text-xl text-white/90 leading-relaxed font-dmserif italic pl-4">
-                              {rev.comment}
-                           </p>
-                        </div>
-                        {rev.tips && (
-                          <div className="pt-6 border-t border-border/20 flex items-start gap-3">
-                             <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
-                                <TrendingUp className="w-4 h-4" />
-                             </div>
-                             <p className="text-sm font-medium text-green-400/80"><span className="font-bold text-green-400 uppercase tracking-widest text-[10px] mr-2">Top Tip</span> {rev.tips}</p>
-                          </div>
+                   canteen.canteen_reviews.map((rev: any) => {
+                     const isAuthor = user?.id === rev.user_id;
+                     const isPrivileged = user?.role === 'super_admin' || user?.role === 'founder' || user?.role === 'moderator';
+                     const canDelete = isAuthor || isPrivileged;
+
+                     return (
+                      <Card key={rev.id} className="rounded-[2.5rem] bg-card/40 border-border/40 hover:border-brand/20 transition-all p-10 space-y-6 relative group">
+                        {canDelete && (
+                            <button
+                            onClick={() => handleDeleteReview(rev.id)}
+                            className="absolute top-6 right-6 p-2 rounded-full bg-red-500/10 text-red-500 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/20"
+                            title="Delete Review"
+                            >
+                            <Trash2 className="w-5 h-5" />
+                            </button>
                         )}
-                     </Card>
-                   ))
+                         <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                               <Avatar className="w-14 h-14 border-2 border-brand/10">
+                                  {rev.is_anonymous ? (
+                                    <AvatarFallback className="bg-brand text-white font-dmserif italic font-bold">A</AvatarFallback>
+                                  ) : (
+                                    <>
+                                      <AvatarImage src={rev.profiles?.profile_image_url} />
+                                      <AvatarFallback className="bg-indigo-500/20 text-indigo-400 font-bold uppercase">{rev.profiles?.name?.[0] || '?'}</AvatarFallback>
+                                    </>
+                                  )}
+                               </Avatar>
+                               <div>
+                                  <div className="font-bold text-lg text-white">{rev.is_anonymous ? "Anonymous Student" : rev.profiles?.name}</div>
+                                  <div className="text-sm text-muted-foreground font-medium">{new Date(rev.created_at).toLocaleDateString()}</div>
+                               </div>
+                            </div>
+                            <div className="flex items-center gap-1 bg-brand/10 px-4 py-2 rounded-full border border-brand/20 mr-12">
+                               <Star className="w-4 h-4 text-brand fill-brand" />
+                               <span className="font-bold text-brand">{rev.rating}</span>
+                            </div>
+                         </div>
+                         <div className="relative">
+                            <Quote className="absolute -left-6 -top-4 w-12 h-12 text-brand/5 rotate-180" />
+                            <p className="text-xl text-white/90 leading-relaxed font-dmserif italic pl-4 pr-8">
+                               {rev.comment}
+                            </p>
+                         </div>
+                         {rev.tips && (
+                           <div className="pt-6 border-t border-border/20 flex items-start gap-3">
+                              <div className="p-2 rounded-lg bg-green-500/10 text-green-400">
+                                 <TrendingUp className="w-4 h-4" />
+                              </div>
+                              <p className="text-sm font-medium text-green-400/80"><span className="font-bold text-green-400 uppercase tracking-widest text-[10px] mr-2">Top Tip</span> {rev.tips}</p>
+                           </div>
+                         )}
+                      </Card>
+                     );
+                   })
                  ) : (
                    <div className="text-center py-20 bg-card/10 rounded-[3rem] border border-dashed border-border/40">
                       <div className="text-muted-foreground font-medium text-lg">No reviews yet. Be the first to tell the truth!</div>
@@ -315,16 +425,7 @@ export default function CanteenDetailPage() {
                <Button variant="outline" className="w-full rounded-2xl h-14 border-rose-500/40 text-rose-500 hover:bg-rose-500/10 font-bold">Report Anonymously</Button>
             </Card>
 
-            <div className="p-8 rounded-[2.5rem] bg-gradient-to-br from-brand/5 to-accent/5 border border-border/40 backdrop-blur-md">
-               <h4 className="font-dmserif italic text-2xl mb-4 text-white">Pro Tip</h4>
-               <p className="text-muted-foreground font-medium leading-relaxed italic">
-                 &quot;Wait for the second batch of Chai at 4:20 PM. It&apos;s usually fresher and stronger.&quot;
-               </p>
-               <div className="mt-4 flex items-center gap-2">
-                 <div className="w-8 h-8 rounded-full bg-brand/20 flex items-center justify-center text-brand font-bold text-xs">A</div>
-                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand/80">Top Contributor</span>
-               </div>
-            </div>
+
         </div>
       </div>
     </div>

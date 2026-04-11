@@ -124,8 +124,45 @@ router.post("/approve-user/:userId", checkAdmin, async (req, res) => {
       target_user_id: userId,
     });
 
+    // Dispatch Notification Email
+    try {
+      const { data: userData } = await supabase.auth.admin.getUserById(userId);
+      if (userData?.user?.email) {
+        const emailAddress = userData.user.email;
+        
+        if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+          const nodemailer = await import("nodemailer");
+          const transporter = nodemailer.createTransport({
+            host: process.env.SMTP_HOST,
+            port: process.env.SMTP_PORT || 587,
+            secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
+            auth: {
+              user: process.env.SMTP_USER,
+              pass: process.env.SMTP_PASS,
+            },
+          });
+
+          await transporter.sendMail({
+            from: `"HMU Admin" <${process.env.SMTP_USER}>`,
+            to: emailAddress,
+            subject: "Your Club Request on HMU has been accepted! 🎉",
+            html: `
+              <h2>Welcome to HMU!</h2>
+              <p>Your club request has been officially accepted by the administrative team.</p>
+              <p>You can now log in and start managing your events, interacting with followers, and representing your club on the platform.</p>
+            `,
+          });
+          console.log(`[EMAIL DISPATCH] Real email sent to ${emailAddress}`);
+        } else {
+          console.log(`[EMAIL DISPATCH - MOCK] Sent to ${emailAddress}: "Your Club Request on HMU has been accepted! You can now log in and manage your club profile."`);
+        }
+      }
+    } catch (emailErr) {
+      console.warn("Failed to dispatch email for notification:", emailErr);
+    }
+
     res.status(200).json({
-      message: "User approved successfully",
+      message: "User approved successfully. Notification email dispatched.",
       user: data[0],
     });
   } catch (error) {

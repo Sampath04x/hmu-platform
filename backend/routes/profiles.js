@@ -232,6 +232,17 @@ router.post("/:userId/follow", verifyAuth, async (req, res) => {
   }
 
   try {
+    // Prevent clubs from following anyone
+    const { data: followerProfile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('user_id', followerId)
+      .single();
+      
+    if (followerProfile?.role === 'club') {
+      return res.status(403).json({ error: "Clubs cannot follow other users" });
+    }
+
     // Check if already following
     const { data: existing } = await supabase
       .from("followers")
