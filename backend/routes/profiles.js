@@ -98,6 +98,7 @@ router.put("/:userId", verifyAuth, async (req, res) => {
     };
     if (username) updatePayload.username = username.toLowerCase().trim();
     if (privacy_settings) updatePayload.privacy_settings = privacy_settings;
+    if (req.body.club_metadata) updatePayload.club_metadata = req.body.club_metadata;
 
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")

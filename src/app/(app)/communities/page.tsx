@@ -77,7 +77,7 @@ export default function CommunitiesPage() {
                             club.name?.[0] || '?'
                           )}
                         </div>
-                        <Button className="h-8 px-5 text-xs bg-brand hover:bg-brand/90 font-semibold z-30 pointer-events-auto shadow-[0_0_10px_rgba(139,139,67,0.3)]">Follow</Button>
+                        <Button className="h-8 px-5 text-xs bg-brand hover:bg-brand/90 font-semibold z-30 pointer-events-auto shadow-[0_0_10px_rgba(139,139,67,0.3)] pointer-events-none">View</Button>
                       </div>
 
                       <div className="flex items-center gap-1.5 mb-1">

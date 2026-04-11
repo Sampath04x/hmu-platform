@@ -41,15 +41,24 @@ export default function UserProfilePage() {
   useEffect(() => {
     async function fetchProfileData() {
       try {
-        const [profileData, eventsData, postsData] = await Promise.all([
+        const [profileData, eventsData, postsData, followersData] = await Promise.all([
           apiFetch(`/profiles/${userId}`),
           apiFetch(`/events?created_by=${userId}`),
-          apiFetch(`/posts?user_id=${userId}`) // Assuming this filter works, or fallback to frontend filtering
+          apiFetch(`/posts?user_id=${userId}`), // Assuming this filter works, or fallback to frontend filtering
+          apiFetch(`/profiles/${userId}/followers`)
         ]);
 
         setProfile(profileData);
         setEvents(eventsData || []);
         setPosts(postsData || []);
+        
+        if (followersData && Array.isArray(followersData)) {
+          const isUserFollowing = followersData.some((f: any) => f.follower_id === currentUserId);
+          setIsFollowing(isUserFollowing);
+          profileData.followersCount = followersData.length;
+        } else {
+          profileData.followersCount = 0;
+        }
       } catch (err) {
         console.error("Failed to fetch profile:", err);
       } finally {
@@ -59,7 +68,23 @@ export default function UserProfilePage() {
     if (userId) {
       fetchProfileData();
     }
-  }, [userId]);
+  }, [userId, currentUserId]);
+
+  const handleFollowToggle = async () => {
+    try {
+      if (isFollowing) {
+        await apiFetch(`/profiles/${userId}/follow`, { method: "DELETE" });
+        setIsFollowing(false);
+        setProfile(prev => ({ ...prev, followersCount: Math.max(0, (prev.followersCount || 0) - 1) }));
+      } else {
+        await apiFetch(`/profiles/${userId}/follow`, { method: "POST" });
+        setIsFollowing(true);
+        setProfile(prev => ({ ...prev, followersCount: (prev.followersCount || 0) + 1 }));
+      }
+    } catch (err) {
+      console.error("Failed to toggle follow status:", err);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -135,8 +160,17 @@ export default function UserProfilePage() {
         {!isOwnProfile && (
           <div className="flex gap-3 mt-7 w-full max-w-sm">
             {currentUserRole !== 'club' && (
-              <Button className="flex-1 h-12 bg-brand hover:opacity-90 text-white font-semibold rounded-xl shadow-[0_0_15px_rgba(194,105,42,0.3)] gap-2">
-                <UserPlusIcon className="w-4 h-4" /> {isClub ? "Follow" : "Connect"}
+              <Button 
+                onClick={handleFollowToggle}
+                variant={isFollowing ? "outline" : "default"}
+                className={`flex-1 h-12 font-semibold rounded-xl gap-2 ${
+                  isFollowing 
+                    ? "border-brand/30 text-brand hover:bg-brand/10" 
+                    : "bg-brand hover:opacity-90 text-white shadow-[0_0_15px_rgba(194,105,42,0.3)]"
+                }`}
+              >
+                <UserPlusIcon className="w-4 h-4" /> 
+                {isFollowing ? (isClub ? "Unfollow" : "Connected") : (isClub ? "Follow" : "Connect")}
               </Button>
             )}
             <Button variant="outline" className="flex-1 h-12 border-brand/30 text-brand hover:bg-brand/10 rounded-xl gap-2 group">
@@ -148,7 +182,7 @@ export default function UserProfilePage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-sm">
           <div className="bg-card border border-border/50 rounded-2xl py-4 px-2 text-center">
-            <div className="text-2xl font-dmserif font-bold text-white">{isClub ? "0" : "18"}</div>
+            <div className="text-2xl font-dmserif font-bold text-white">{profile?.followersCount || "0"}</div>
             <div className="text-xs text-muted-foreground mt-1">{isClub ? "Followers" : "Connections"}</div>
           </div>
           <div className="bg-card border border-border/50 rounded-2xl py-4 px-2 text-center">
