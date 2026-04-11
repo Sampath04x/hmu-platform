@@ -1,15 +1,25 @@
 import express from "express";
 import supabase from "../config/supabase.js";
+import { verifyAuth } from "../utils/auth.js";
+
 const router = express.Router();
 
 router.get("/", async (req, res) => {
-  const { data, error } = await supabase.from("events").select("*");
+  const { created_by } = req.query;
+  let query = supabase.from("events").select("*").order("started_at", { ascending: true });
+  
+  if (created_by) {
+    query = query.eq("created_by", created_by);
+  }
+
+  const { data, error } = await query;
   if (error) {
     return res.status(500).json({ error: error.message });
   }
   res.json(data);
 });
-router.post("/", async (req, res) => {
+
+router.post("/", verifyAuth, async (req, res) => {
   const {
     title,
     description,
@@ -17,23 +27,30 @@ router.post("/", async (req, res) => {
     ended_at,
     poster_url,
     location,
-    club_id,
-    created_by,
   } = req.body;
+  
+  const userId = req.user.id;
 
   // Validation
-  if (
-    !title ||
-    !description ||
-    !started_at ||
-    !poster_url ||
-    !location ||
-    !created_by
-  ) {
+  if (!title || !description || !started_at || !location) {
     return res.status(400).json({
-      error:
-        "Missing required fields: title, description, started_at, poster_url, location, created_by",
+      error: "Missing required fields: title, description, started_at, location",
     });
+  }
+
+  // Get user profile to check role and set club_id
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("name, role")
+    .eq("user_id", userId)
+    .single();
+
+  if (profileError || !profile) {
+    return res.status(404).json({ error: "Profile not found" });
+  }
+
+  if (profile.role !== "club" && profile.role !== "super_admin" && profile.role !== "founder") {
+    return res.status(403).json({ error: "Only clubs or admins can create events" });
   }
 
   const { data, error } = await supabase
@@ -46,8 +63,8 @@ router.post("/", async (req, res) => {
         ended_at,
         poster_url,
         location,
-        club_id,
-        created_by,
+        club_id: profile.name, // Use the profile name as club_id
+        created_by: userId,
       },
     ])
     .select();
@@ -57,6 +74,7 @@ router.post("/", async (req, res) => {
   }
   res.status(201).json(data);
 });
+
 router.get("/:id", async (req, res) => {
   const { data, error } = await supabase
     .from("events")
@@ -70,9 +88,19 @@ router.get("/:id", async (req, res) => {
 });
 
 // UPDATE event
-router.put("/:id", async (req, res) => {
-  const { title, description, started_at, ended_at, location, poster_url } =
-    req.body;
+router.put("/:id", verifyAuth, async (req, res) => {
+  const { title, description, started_at, ended_at, location, poster_url } = req.body;
+  const userId = req.user.id;
+  
+  // Verify ownership or admin
+  const { data: event } = await supabase.from("events").select("created_by").eq("event_id", req.params.id).single();
+  const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userId).single();
+  
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  
+  if (event.created_by !== userId && profile?.role !== 'super_admin' && profile?.role !== 'founder') {
+      return res.status(403).json({ error: "Unauthorized" });
+  }
 
   const { data, error } = await supabase
     .from("events")
@@ -87,7 +115,19 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE event
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", verifyAuth, async (req, res) => {
+  const userId = req.user.id;
+  
+  // Verify ownership or admin
+  const { data: event } = await supabase.from("events").select("created_by").eq("event_id", req.params.id).single();
+  const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userId).single();
+  
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  
+  if (event.created_by !== userId && profile?.role !== 'super_admin' && profile?.role !== 'founder') {
+      return res.status(403).json({ error: "Unauthorized" });
+  }
+
   const { error } = await supabase
     .from("events")
     .delete()
@@ -98,4 +138,5 @@ router.delete("/:id", async (req, res) => {
   }
   res.json({ message: "Event deleted successfully" });
 });
+
 export default router;

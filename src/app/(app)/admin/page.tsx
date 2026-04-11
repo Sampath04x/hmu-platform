@@ -31,6 +31,17 @@ export default function AdminPage() {
   const { role, user_id } = useUser();
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [pendingClubs, setPendingClubs] = useState<any[]>([]);
+  const [canteens, setCanteens] = useState<any[]>([]);
+  
+  const [newCanteen, setNewCanteen] = useState({
+    name: "",
+    description: "",
+    location: "",
+    image_url: "",
+    category: "Main Canteen"
+  });
+  const [isAddingCanteen, setIsAddingCanteen] = useState(false);
 
   const canManageAdmins = ["super_admin", "founder"].includes(role);
   const canModerate = ["super_admin", "founder", "moderator"].includes(role);
@@ -38,24 +49,61 @@ export default function AdminPage() {
   const canManageClubs = ["super_admin", "founder", "moderator"].includes(role);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
        try {
-          const data = await apiFetch("/admin/stats");
-          setStats(data);
+          const [statsData, pendingData, canteensData] = await Promise.all([
+             apiFetch("/admin/stats").catch(() => ({
+                totalUsers: 452,
+                pendingVerifications: 12,
+                reportedPosts: 3,
+                activeCanteens: 8
+             })),
+             apiFetch("/admin/pending-users").catch(() => []),
+             apiFetch("/canteens").catch(() => [])
+          ]);
+          setStats(statsData);
+          if (Array.isArray(pendingData)) {
+            setPendingClubs(pendingData.filter((u: any) => u.role === "club"));
+          }
+          if (Array.isArray(canteensData)) {
+            setCanteens(canteensData);
+          }
        } catch (err) {
           console.warn("Dashboard fetch failed, showing demo data", err);
-          setStats({
-            totalUsers: 452,
-            pendingVerifications: 12,
-            reportedPosts: 3,
-            activeCanteens: 8
-          });
        } finally {
           setIsLoading(false);
        }
     };
-    fetchStats();
+    fetchData();
   }, []);
+
+  const approveClub = async (userId: string) => {
+    try {
+      await apiFetch(`/admin/approve-user/${userId}`, { method: "POST" });
+      toast.success("Club approved successfully");
+      setPendingClubs(prev => prev.filter(c => c.user_id !== userId));
+    } catch (err) {
+      toast.error("Failed to approve club");
+    }
+  };
+
+  const handleAddCanteen = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAddingCanteen(true);
+    try {
+      const data = await apiFetch("/admin/canteens", {
+        method: "POST",
+        body: JSON.stringify({...newCanteen, menu: []})
+      });
+      setCanteens(prev => [...prev, data]);
+      setNewCanteen({ name: "", description: "", location: "", image_url: "", category: "Main Canteen" });
+      toast.success("Canteen added successfully");
+    } catch (err) {
+      toast.error("Failed to add canteen");
+    } finally {
+      setIsAddingCanteen(false);
+    }
+  };
 
   if (isLoading) return <div className="p-8">Loading dashboard...</div>;
 
@@ -204,12 +252,20 @@ export default function AdminPage() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <Card className="rounded-3xl bg-brand/5 border-brand/20">
               <CardContent className="p-10 flex flex-col items-center justify-center text-center space-y-4">
-                <div className="w-20 h-20 rounded-3xl bg-brand/20 flex items-center justify-center">
-                  <PlusCircle className="w-10 h-10 text-brand" />
+                <div className="w-16 h-16 rounded-3xl bg-brand/20 flex items-center justify-center">
+                  <PlusCircle className="w-8 h-8 text-brand" />
                 </div>
                 <h3 className="text-2xl font-dmserif font-bold">Add New Canteen</h3>
-                <p className="text-muted-foreground">Register a new outlet or dining hall on campus.</p>
-                <Button className="bg-brand text-white rounded-full px-10 h-12 mt-4 hover:bg-accent font-semibold transition-all shadow-[0_0_15px_rgba(194,105,42,0.3)]">Register Outlet</Button>
+                <form onSubmit={handleAddCanteen} className="w-full space-y-4 text-left mt-4">
+                   <input required minLength={2} className="w-full bg-background border border-border/40 rounded-xl px-4 py-2 text-sm outline-none" placeholder="Canteen Name" value={newCanteen.name} onChange={e => setNewCanteen({...newCanteen, name: e.target.value})} />
+                   <input className="w-full bg-background border border-border/40 rounded-xl px-4 py-2 text-sm outline-none" placeholder="Location" value={newCanteen.location} onChange={e => setNewCanteen({...newCanteen, location: e.target.value})} />
+                   <input className="w-full bg-background border border-border/40 rounded-xl px-4 py-2 text-sm outline-none" placeholder="Image URL" value={newCanteen.image_url} onChange={e => setNewCanteen({...newCanteen, image_url: e.target.value})} />
+                   <input className="w-full bg-background border border-border/40 rounded-xl px-4 py-2 text-sm outline-none" placeholder="Category (e.g. Snacks, Meals)" value={newCanteen.category} onChange={e => setNewCanteen({...newCanteen, category: e.target.value})} />
+                   <textarea className="w-full bg-background border border-border/40 rounded-xl px-4 py-2 text-sm outline-none" placeholder="Description" rows={3} value={newCanteen.description} onChange={e => setNewCanteen({...newCanteen, description: e.target.value})} />
+                   <Button disabled={isAddingCanteen} type="submit" className="w-full bg-brand text-white rounded-xl h-12 hover:bg-accent font-semibold transition-all">
+                     {isAddingCanteen ? "Adding..." : "Register Outlet"}
+                   </Button>
+                </form>
               </CardContent>
             </Card>
             <Card className="rounded-3xl border-border/40">
@@ -218,8 +274,10 @@ export default function AdminPage() {
                </CardHeader>
                <CardContent className="p-8 pt-0">
                  <div className="space-y-4">
-                    <OutletItem name="V-Shop" rating={4.5} status="open" />
-                    <OutletItem name="T-Shop" rating={4.2} status="open" />
+                    {canteens.map(c => (
+                      <OutletItem key={c.id} name={c.name} rating={c.average_rating || 0} status={(c.average_rating || 0) > 4 ? 'open' : 'busy'} />
+                    ))}
+                    {canteens.length === 0 && <p className="text-muted-foreground text-sm">No canteens added yet.</p>}
                  </div>
                </CardContent>
             </Card>
@@ -234,44 +292,25 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="p-8 pt-0">
                  <div className="space-y-6">
-                    <div className="flex items-center justify-between p-6 bg-background/50 rounded-2xl border border-border/40 hover:border-brand/30 transition-all">
-                       <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-brand font-bold text-lg">GC</div>
-                          <div>
-                             <div className="font-bold text-white uppercase tracking-wider">G-Coding Club</div>
-                             <div className="text-xs text-muted-foreground font-mono">gcode_vsp@gitam.in</div>
-                          </div>
-                       </div>
-                       <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" className="rounded-full px-5 text-xs font-bold uppercase tracking-widest opacity-60">View Details</Button>
-                          <Button size="sm" className="bg-brand text-white rounded-full px-6 font-bold">Approve</Button>
-                       </div>
-                    </div>
-                    
-                    <div className="pt-10 mt-4 border-t border-border/40">
-                       <div className="flex items-end justify-between mb-8">
-                          <h3 className="text-xl font-dmserif font-bold">Interactions Heatmap</h3>
-                          <div className="flex items-center gap-4">
-                             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-brand/20" /><span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Views</span></div>
-                             <div className="flex items-center gap-1.5"><div className="w-2.5 h-2.5 rounded-full bg-brand" /><span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Hearts</span></div>
-                          </div>
-                       </div>
-                       <div className="h-56 flex items-end gap-3 px-2">
-                          {[40, 70, 45, 90, 65, 80, 55].map((h, i) => (
-                             <div key={i} className="flex-1 space-y-1 group cursor-pointer">
-                                <div className="w-full bg-brand/10 hover:bg-brand/20 rounded-t-lg transition-all h-2/3 relative" style={{ height: `${h * 0.4}%` }} />
-                                <div className="w-full bg-brand rounded-t-sm transition-all h-1/3 relative shadow-[0_0_10px_rgba(194,105,42,0.4)]" style={{ height: `${h * 0.6}%` }}>
-                                   <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-popover border border-border px-3 py-1.5 rounded-xl text-[10px] font-bold hidden group-hover:block whitespace-nowrap z-10 shadow-2xl">
-                                      {h * 12} Engagement
-                                   </div>
-                                </div>
-                             </div>
-                          ))}
-                       </div>
-                       <div className="flex justify-between mt-6 text-[10px] text-muted-foreground font-bold uppercase tracking-[0.2em] opacity-40 px-4">
-                          <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
-                       </div>
-                    </div>
+                    {pendingClubs.length === 0 ? (
+                       <p className="text-muted-foreground">No pending clubs to approve.</p>
+                     ) : (
+                       pendingClubs.map((club) => (
+                         <div key={club.user_id} className="flex items-center justify-between p-6 bg-background/50 rounded-2xl border border-border/40 hover:border-brand/30 transition-all">
+                            <div className="flex items-center gap-4">
+                               <div className="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center text-brand font-bold text-lg">{club.name ? club.name[0] : 'C'}</div>
+                               <div>
+                                  <div className="font-bold text-white uppercase tracking-wider">{club.club_metadata?.name || club.name || "Unnamed Club"}</div>
+                                  <div className="text-xs text-muted-foreground font-mono">{club.username}</div>
+                                  <div className="text-xs text-muted-foreground">{club.club_metadata?.category || "Category pending"}</div>
+                               </div>
+                            </div>
+                            <div className="flex gap-2">
+                               <Button size="sm" onClick={() => approveClub(club.user_id)} className="bg-brand text-white rounded-full px-6 font-bold">Approve</Button>
+                            </div>
+                         </div>
+                       ))
+                     )}
                  </div>
               </CardContent>
            </Card>

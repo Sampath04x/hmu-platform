@@ -21,15 +21,18 @@ const ALL_INTERESTS = [
 const DEPARTMENTS = ["CSE", "ECE", "Mechanical", "Civil", "EEE", "IT", "Chemical", "Biotech", "MBA", "Law", "Pharmacy", "Architecture"];
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "Ph.D."];
 
+const CLUB_CATEGORIES = ["Technical", "Cultural", "Sports", "Media", "Literature", "Social", "Other"];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
-  const { name, setName, interests: selectedTags, setInterests: setSelectedTags, aiProfile, setIsLoggedIn, user_id } = useUser();
+  const { name, setName, role, interests: selectedTags, setInterests: setSelectedTags, aiProfile, setIsLoggedIn, user_id } = useUser();
   
   const [username, setUsername] = useState("");
   const [department, setDepartment] = useState(DEPARTMENTS[0]);
   const [year, setYear] = useState(YEARS[0]);
   const [bio, setBio] = useState("");
+  const [clubCategory, setClubCategory] = useState(CLUB_CATEGORIES[0]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -58,19 +61,28 @@ export default function OnboardingPage() {
       }
 
       let parsedYear = parseInt(year);
-      if (isNaN(parsedYear)) parsedYear = 6; // Handle Ph.D. as 6
+      if (isNaN(parsedYear)) parsedYear = 6;
+
+      const payload: any = {
+        username,
+        name,
+        bio,
+      };
+
+      if (role === 'club') {
+        payload.club_metadata = {
+          category: clubCategory
+        };
+      } else {
+        payload.department = department;
+        payload.year_of_study = parsedYear;
+        payload.interests = selectedTags;
+        payload.privacy_settings = privacySettings;
+      }
 
       await apiFetch(`/profiles/${user_id}`, {
         method: "PUT",
-        body: JSON.stringify({
-          username,
-          name,
-          department,
-          year_of_study: parsedYear,
-          bio,
-          interests: selectedTags,
-          privacy_settings: privacySettings
-        }),
+        body: JSON.stringify(payload),
       });
 
       setIsLoggedIn(true);
@@ -81,6 +93,98 @@ export default function OnboardingPage() {
     }
   };
 
+  // Club Onboarding Flow
+  if (role === 'club') {
+    return (
+      <div className="min-h-screen bg-background flex flex-col pt-10 p-4">
+        <div className="max-w-xl mx-auto w-full space-y-6">
+          <header className="mb-4">
+            <div className="text-center space-y-1">
+              <h1 className="text-3xl font-dmserif font-semibold">Club Profile</h1>
+              <p className="text-muted-foreground">Set up your community space.</p>
+            </div>
+          </header>
+
+          {errorMsg && (
+            <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-4 rounded-xl text-sm animate-in fade-in zoom-in-95">
+              {errorMsg}
+            </div>
+          )}
+
+          <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-400">
+            <div className="flex justify-center py-2">
+              <div className="relative group cursor-pointer">
+                <div className="w-28 h-28 rounded-full bg-card border-2 border-dashed border-border flex items-center justify-center overflow-hidden hover:border-brand/50 transition-colors">
+                  <div className="flex flex-col items-center gap-1.5 text-muted-foreground group-hover:text-brand transition-colors">
+                    <CameraIcon className="w-7 h-7" />
+                    <span className="text-xs font-semibold uppercase tracking-wider">Logo</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Club Name</label>
+                <Input 
+                  placeholder="e.g. Photography Club" 
+                  className="h-12 bg-card rounded-xl border-border focus-visible:ring-brand shadow-sm" 
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Club Username</label>
+                <div className="relative">
+                  <AtSignIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="club_username" 
+                    className="h-12 bg-card rounded-xl border-border focus-visible:ring-brand pl-10 shadow-sm" 
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g, ""))}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Category</label>
+                <select 
+                  className="flex h-12 w-full rounded-xl border border-input bg-card px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand shadow-sm cursor-pointer"
+                  value={clubCategory}
+                  onChange={(e) => setClubCategory(e.target.value)}
+                >
+                  {CLUB_CATEGORIES.map(c => <option key={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Club Bio</label>
+                <Textarea
+                  placeholder="Describe your club's mission and regular activities..."
+                  className="min-h-24 bg-card rounded-xl resize-none focus-visible:ring-brand shadow-sm"
+                  maxLength={500}
+                  value={bio}
+                  onChange={e => setBio(e.target.value)}
+                />
+                <p className="text-xs text-right text-muted-foreground">{bio.length}/500</p>
+              </div>
+            </div>
+
+            <Button
+              className="w-full h-14 bg-brand hover:opacity-90 rounded-xl text-base font-semibold transition-all shadow-[0_4px_12px_rgba(194,105,42,0.2)] disabled:opacity-50"
+              onClick={handleFinish}
+              disabled={isLoading || !name || !username}
+            >
+              {isLoading ? "Saving..." : "Submit for Approval"}
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normal User Onboarding Flow
   return (
     <div className="min-h-screen bg-background flex flex-col pt-10 p-4">
       <div className="max-w-xl mx-auto w-full space-y-6">
@@ -267,7 +371,7 @@ export default function OnboardingPage() {
                 "What are you actually trying to figure out right now?",
                 "What kind of person do you click with?",
               ].map((q, i) => (
-                <div key={i} className="space-y-2">
+                 <div key={i} className="space-y-2">
                   <label className="text-sm font-medium text-accent/90">{q}</label>
                   <Textarea className="min-h-[90px] bg-card rounded-xl border-border resize-none focus-visible:ring-brand shadow-sm" maxLength={150} />
                 </div>

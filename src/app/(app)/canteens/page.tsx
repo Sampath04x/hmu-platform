@@ -23,22 +23,14 @@ export default function CanteensPage() {
       try {
         const data = await apiFetch("/canteens");
         
-        // Map images to backend data (since images aren't in DB yet)
-        const images: any = {
-           "V-Shop": "https://images.unsplash.com/photo-1547825407-2d060104b7f8?auto=format&fit=crop&q=80&w=400",
-           "T-Shop": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&q=80&w=400",
-           "Chai Point": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=400",
-           "D-Hall": "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=400"
-        };
-
         setCanteens(data.map((c: any) => ({
           ...c,
           id: c.id,
           rating: c.average_rating,
           reviews: c.review_count,
-          image: images[c.name] || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=400",
+          image: c.image_url || "https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?auto=format&fit=crop&q=80&w=400",
           status: c.average_rating > 4 ? "open" : "busy", 
-          specialty: Array.isArray(c.menu) ? c.menu.join(" & ") : "Snacks & Drinks"
+          specialty: c.category || "Snacks & Drinks"
         })));
       } catch (err) {
         console.error("Failed to fetch canteens:", err);

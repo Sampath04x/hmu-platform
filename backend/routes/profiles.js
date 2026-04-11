@@ -31,7 +31,7 @@ router.get("/:userId", async (req, res) => {
 
 // GET all users with optional search and filtering
 router.get("/", async (req, res) => {
-  const { search, department, year } = req.query;
+  const { search, department, year, role, is_approved } = req.query;
 
   try {
     let query = supabase.from("profiles").select("*");
@@ -46,6 +46,14 @@ router.get("/", async (req, res) => {
 
     if (year) {
       query = query.eq("year_of_study", parseInt(year));
+    }
+    
+    if (role) {
+      query = query.eq("role", role);
+    }
+    
+    if (is_approved !== undefined) {
+      query = query.eq("is_approved", is_approved === 'true');
     }
 
     const { data, error } = await query.eq("is_suspended", false);

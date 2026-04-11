@@ -374,11 +374,11 @@ router.get("/clubs/:clubId/admins", checkAdmin, async (req, res) => {
 
 // Add a new canteen
 router.post("/canteens", checkJuniorModerator, async (req, res) => {
-  const { name, description, location } = req.body;
+  const { name, description, location, image_url, category } = req.body;
   try {
     const { data, error } = await supabase
       .from("canteens")
-      .insert({ name, description, location })
+      .insert({ name, description, location, image_url, category })
       .select();
 
     if (error) return res.status(500).json({ error: error.message });

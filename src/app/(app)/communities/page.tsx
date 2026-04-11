@@ -1,27 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { SearchIcon, CheckCircle2Icon, UsersIcon, Building2, ChevronRight } from "lucide-react";
+import { SearchIcon, CheckCircle2Icon, UsersIcon, Building2, ChevronRight, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { apiFetch } from "@/lib/apiClient";
 
 export default function CommunitiesPage() {
-  const trendingClubs = [
-    { id: "gdsc", name: "Google Developer Student Club", category: "Technical", members: 340, verified: true, joined: true },
-    { id: "photo", name: "Photography Club", category: "Media", members: 189, verified: true, joined: false },
-    { id: "lit", name: "Lit Society", category: "Cultural", members: 156, verified: true, joined: false },
-    { id: "fc", name: "FC Campus", category: "Sports", members: 267, verified: false, joined: false },
-    { id: "startup", name: "Startup Cell", category: "Technical", members: 198, verified: true, joined: false },
-    { id: "debate", name: "Debate Union", category: "Cultural", members: 134, verified: false, joined: false }
-  ];
+  const [clubs, setClubs] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const interestGroups = [
-    { name: "Chess Club", members: 45 },
-    { name: "Anime Watchers", members: 112 },
-    { name: "Cafe Hoppers", members: 89 },
-    { name: "Night Owls", members: 230 }
-  ];
+  useEffect(() => {
+    fetchClubs();
+  }, []);
+
+  const fetchClubs = async () => {
+    try {
+      const data = await apiFetch('/profiles?role=club&is_approved=true');
+      setClubs(data);
+    } catch (error) {
+      console.error("Failed to fetch clubs:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
 
   return (
     <div className="min-h-screen bg-background relative pb-24 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -59,83 +64,70 @@ export default function CommunitiesPage() {
         />
       </div>
 
-      {/* Your Clubs */}
-      <section className="mb-12">
-        <h2 className="text-xl font-dmserif font-semibold mb-4">Your Clubs</h2>
-        <div className="flex gap-4 overflow-x-auto hide-scrollbar pb-4 snap-x">
-          {trendingClubs.filter(c => c.joined).map(club => (
-            <Link key={club.id} href={`/communities/${club.id}`} className="shrink-0 w-64 snap-start">
-              <Card className="flex items-center gap-3 p-3 bg-card border-border/50 glow-hover hover:scale-105 transition-all">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-brand to-accent flex items-center justify-center font-bold text-white shadow-lg">
-                  {club.name[0]}
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <h3 className="font-semibold text-sm truncate">{club.name}</h3>
-                  <p className="text-xs text-muted-foreground truncate">{club.members} members</p>
-                </div>
-              </Card>
-            </Link>
-          ))}
-          <div className="shrink-0 w-64 snap-start">
-            <Card className="flex items-center gap-3 p-3 bg-card border-border border-dashed hover:border-brand/50 hover:bg-brand/5 transition-colors cursor-pointer justify-center h-[74px]">
-              <p className="font-medium text-brand text-sm">Explore more +</p>
-            </Card>
-          </div>
+      {isLoading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-brand" />
         </div>
-      </section>
+      ) : (
+        <>
+          {/* Trending on Campus */}
+          <section className="mb-12">
+            <h2 className="text-xl font-dmserif font-semibold mb-4">Official Clubs & Communities</h2>
+            {clubs.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No communities found at the moment.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {clubs.map(club => (
+                  <Card key={club.user_id} className="overflow-hidden bg-card border-border/50 glow-hover group relative">
+                    <Link href={`/profile/${club.user_id}`} className="absolute inset-0 z-10" aria-label={`View ${club.name}`}></Link>
+                    
+                    <div className="h-24 bg-gradient-to-br from-brand/20 to-accent/5 group-hover:from-brand/30 transition-colors relative">
+                      <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff33_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                    </div>
+                    
+                    <div className="px-5 pb-5 pt-0 relative z-20">
+                      <div className="flex justify-between items-end mb-3">
+                        <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand to-accent text-white font-bold text-2xl flex items-center justify-center -mt-8 border-[4px] border-card shadow-lg ring-1 ring-border overflow-hidden">
+                          {club.profile_image_url ? (
+                            <img src={club.profile_image_url} alt={club.name} className="w-full h-full object-cover" />
+                          ) : (
+                            club.name?.[0] || '?'
+                          )}
+                        </div>
+                        <Button className="h-8 px-5 text-xs bg-brand hover:bg-brand/90 font-semibold z-30 pointer-events-auto shadow-[0_0_10px_rgba(139,139,67,0.3)]">Follow</Button>
+                      </div>
 
-      {/* Trending on Campus */}
-      <section className="mb-12">
-        <h2 className="text-xl font-dmserif font-semibold mb-4">Trending on Campus</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {trendingClubs.map(club => (
-            <Card key={club.id} className="overflow-hidden bg-card border-border/50 glow-hover group relative">
-              <Link href={`/communities/${club.id}`} className="absolute inset-0 z-10" aria-label={`View ${club.name}`}></Link>
-              
-              <div className="h-24 bg-gradient-to-br from-brand/20 to-accent/5 group-hover:from-brand/30 transition-colors relative">
-                {/* Abstract pattern placeholder */}
-                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(#ffffff33_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <h3 className="font-dmserif font-semibold text-lg text-white group-hover:text-brand transition-colors leading-tight">{club.name}</h3>
+                        <CheckCircle2Icon className="w-4 h-4 text-blue-500 fill-blue-500/20" />
+                      </div>
+                      
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
+                        <span className="bg-muted/50 px-2 py-1 rounded-md text-foreground font-medium">
+                          {club.club_metadata?.category || "Community"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <UsersIcon className="w-3.5 h-3.5" />
+                          {/* Fetch real followers count or just a placeholder */}
+                          {club.followers_count || 0}
+                        </span>
+                      </div>
+                      
+                      {club.bio && (
+                         <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                           {club.bio}
+                         </p>
+                      )}
+                    </div>
+                  </Card>
+                ))}
               </div>
-              
-              <div className="px-5 pb-5 pt-0 relative z-20">
-                <div className="flex justify-between items-end mb-3">
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-brand to-accent text-white font-bold text-2xl flex items-center justify-center -mt-8 border-[4px] border-card shadow-lg ring-1 ring-border">
-                    {club.name[0]}
-                  </div>
-                  {club.joined ? (
-                    <Button variant="outline" className="h-8 px-3 text-xs bg-card hover:bg-muted font-medium z-30" disabled>Joined</Button>
-                  ) : (
-                    <Button className="h-8 px-5 text-xs bg-brand hover:bg-brand/90 font-semibold z-30 pointer-events-auto shadow-[0_0_10px_rgba(139,139,67,0.3)]">Join</Button>
-                  )}
-                </div>
+            )}
+          </section>
 
-                <div className="flex items-center gap-1.5 mb-1">
-                  <h3 className="font-dmserif font-semibold text-lg text-white group-hover:text-brand transition-colors leading-tight">{club.name}</h3>
-                  {club.verified && <CheckCircle2Icon className="w-4 h-4 text-blue-500 fill-blue-500/20" />}
-                </div>
-                
-                <div className="flex items-center gap-3 text-xs text-muted-foreground mt-2">
-                  <span className="bg-muted/50 px-2 py-1 rounded-md text-foreground font-medium">{club.category}</span>
-                  <span className="flex items-center gap-1"><UsersIcon className="w-3.5 h-3.5" />{club.members}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
-      </section>
 
-      {/* Interest Groups */}
-      <section className="mb-8">
-        <h2 className="text-xl font-dmserif font-semibold mb-4">Interest Groups</h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {interestGroups.map((group, i) => (
-            <Card key={i} className="p-4 bg-card border-border/50 hover:border-brand/30 hover:bg-brand/5 transition-all cursor-pointer group">
-              <h3 className="font-medium text-white group-hover:text-brand transition-colors mb-1">{group.name}</h3>
-              <p className="text-xs text-muted-foreground">{group.members} members</p>
-            </Card>
-          ))}
-        </div>
-      </section>
+        </>
+      )}
     </div>
   );
 }
