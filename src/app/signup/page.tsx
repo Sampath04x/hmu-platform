@@ -226,13 +226,21 @@ export default function SignupPage() {
             </Button>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-center border-t border-zinc-800/50 pt-4">
+        <CardFooter className="flex flex-col gap-4 border-t border-zinc-800/50 pt-4 px-6">
           <p className="text-sm text-zinc-400">
             Already have an account?{" "}
             <Link href="/signin" className="text-indigo-400 hover:text-indigo-300 font-medium transition-colors">
               Sign in
             </Link>
           </p>
+          <div className="pt-2 border-t border-zinc-800/30 w-full text-center">
+            <p className="text-xs text-zinc-500">
+              Are you a Club / Organization?{" "}
+              <Link href="/auth/club-request" className="text-zinc-400 hover:text-white font-semibold transition-colors">
+                Request Access
+              </Link>
+            </p>
+          </div>
         </CardFooter>
       </Card>
     </div>

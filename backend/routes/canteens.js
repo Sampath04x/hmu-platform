@@ -72,9 +72,9 @@ router.post("/:id/review", verifyAuth, async (req, res) => {
       .select();
 
     if (error) {
-       if (error.code === '23505') { // Unique constraint
-         return res.status(400).json({ error: "You have already rated this canteen. Update your existing review instead." });
-       }
+        if (error.code === '23505') { // Unique constraint
+          return res.status(400).json({ error: "You have already rated this canteen. You can delete your existing review if you wish to post a new one." });
+        }
        return res.status(500).json({ error: error.message });
     }
 

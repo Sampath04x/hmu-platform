@@ -171,5 +171,42 @@ router.get("/me", async (req, res) => {
   }
 });
 
+// SUBMIT CLUB REQUEST
+router.post("/club-request", async (req, res) => {
+  const { club_name, club_email, president_name, category, description } = req.body;
+
+  if (!club_name || !club_email || !president_name) {
+    return res.status(400).json({ error: "Club name, email, and president name are required" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("club_requests")
+      .insert({
+        club_name,
+        club_email: club_email.toLowerCase().trim(),
+        president_name,
+        category,
+        description,
+        status: "pending"
+      })
+      .select();
+
+    if (error) {
+      if (error.code === '23505') {
+        return res.status(400).json({ error: "A request for this email already exists." });
+      }
+      return res.status(500).json({ error: error.message });
+    }
+
+    res.status(201).json({
+      message: "Club request submitted successfully. Our team will review it soon.",
+      request: data[0]
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router;
 

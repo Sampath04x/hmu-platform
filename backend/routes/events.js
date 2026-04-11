@@ -1,6 +1,7 @@
 import express from "express";
 import supabase from "../config/supabase.js";
 import { verifyAuth } from "../utils/auth.js";
+import { logAuditAction } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -72,6 +73,19 @@ router.post("/", verifyAuth, async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message });
   }
+
+  // Notify followers
+  import("../utils/notifications.js").then(({ notifyFollowers }) => {
+    notifyFollowers(userId, 'club_event', {
+      club_id: userId,
+      club_name: profile.name || 'A club you follow',
+      event_title: title,
+      event_id: data[0].event_id,
+      preview: description ? (description.length > 60 ? description.substring(0, 60) + '...' : description) : 'Upcoming event!',
+      link: `/events` // Link to events page
+    });
+  });
+
   res.status(201).json(data);
 });
 
@@ -119,7 +133,7 @@ router.delete("/:id", verifyAuth, async (req, res) => {
   const userId = req.user.id;
   
   // Verify ownership or admin
-  const { data: event } = await supabase.from("events").select("created_by").eq("event_id", req.params.id).single();
+  const { data: event } = await supabase.from("events").select("created_by, title").eq("event_id", req.params.id).single();
   const { data: profile } = await supabase.from('profiles').select('role').eq('user_id', userId).single();
   
   if (!event) return res.status(404).json({ error: "Event not found" });
@@ -136,6 +150,10 @@ router.delete("/:id", verifyAuth, async (req, res) => {
   if (error) {
     return res.status(500).json({ error: error.message });
   }
+
+  // Log action
+  await logAuditAction(userId, "DELETE_EVENT", req.params.id, { title: event.title });
+
   res.json({ message: "Event deleted successfully" });
 });
 

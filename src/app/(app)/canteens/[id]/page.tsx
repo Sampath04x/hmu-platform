@@ -14,7 +14,6 @@ import {
   Quote,
   TrendingUp,
   AlertCircle,
-  AlertCircle,
   Trash2,
   Edit2
 } from "lucide-react";
@@ -36,7 +35,7 @@ import { useUser } from "@/context/UserContext";
 export default function CanteenDetailPage() {
   const { id } = useParams();
   const router = useRouter();
-  const { user } = useUser();
+  const { role: userRole, user_id } = useUser();
   const [canteen, setCanteen] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [review, setReview] = useState("");
@@ -45,8 +44,7 @@ export default function CanteenDetailPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<any>({});
-  
-  const canManageCanteen = user?.role === 'super_admin' || user?.role === 'founder' || user?.role === 'junior_moderator' || user?.role === 'moderator';
+  const canManageCanteen = userRole === 'super_admin' || userRole === 'founder' || userRole === 'junior_moderator' || userRole === 'moderator';
 
   const fetchCanteen = async () => {
     try {
@@ -328,8 +326,8 @@ export default function CanteenDetailPage() {
               <div className="space-y-6">
                  {canteen.canteen_reviews && canteen.canteen_reviews.length > 0 ? (
                    canteen.canteen_reviews.map((rev: any) => {
-                     const isAuthor = user?.id === rev.user_id;
-                     const isPrivileged = user?.role === 'super_admin' || user?.role === 'founder' || user?.role === 'moderator';
+                     const isAuthor = user_id === rev.user_id;
+                     const isPrivileged = userRole === 'super_admin' || userRole === 'founder' || userRole === 'moderator';
                      const canDelete = isAuthor || isPrivileged;
 
                      return (

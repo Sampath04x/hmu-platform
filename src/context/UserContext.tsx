@@ -35,6 +35,10 @@ interface UserContextType {
   token: string | null;
   setToken: (val: string | null) => void;
   isAuthLoading: boolean;
+  isApproved: boolean;
+  setIsApproved: (val: boolean) => void;
+  isSuspended: boolean;
+  setIsSuspended: (val: boolean) => void;
 }
 
 const UserContext = createContext<UserContextType | undefined>(undefined);
@@ -51,6 +55,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [isApproved, setIsApproved] = useState(false);
+  const [isSuspended, setIsSuspended] = useState(false);
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -74,6 +80,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
               setRole(data.profile.role || 'user');
               setPermissions(data.profile.permissions || {});
               setHasCompletedPersonality(data.profile.has_completed_personality || false);
+              setIsApproved(data.profile.is_approved || false);
+              setIsSuspended(data.profile.is_suspended || false);
             }
           } else {
             setIsLoggedIn(false);
@@ -138,7 +146,9 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       aiProfile, setAiProfile,
       isLoggedIn, setIsLoggedIn,
       token, setToken,
-      isAuthLoading
+      isAuthLoading,
+      isApproved, setIsApproved,
+      isSuspended, setIsSuspended
     }}>
       {children}
     </UserContext.Provider>

@@ -64,7 +64,7 @@ router.post("/", verifyAuth, async (req, res) => {
     // 1. Get user profile and role
     const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('role')
+      .select('role, name')
       .eq('user_id', userId)
       .single();
 
@@ -98,6 +98,19 @@ router.post("/", verifyAuth, async (req, res) => {
 
     // 4. Track activity and add 1 point
     await trackActivity(userId, 1);
+
+    // 5. Notify followers if the user is a club
+    if (profile.role === 'club') {
+      import("../utils/notifications.js").then(({ notifyFollowers }) => {
+        notifyFollowers(userId, 'club_post', {
+          club_id: userId,
+          club_name: profile.name || 'A club you follow',
+          post_id: data.id,
+          preview: title || (content ? (content.length > 60 ? content.substring(0, 60) + '...' : content) : 'posted an update'),
+          link: `/profile/${userId}` // Direct profile link for now
+        });
+      });
+    }
 
     res.status(201).json({ message: "Post created!", post: data });
   } catch (error) {

@@ -54,7 +54,7 @@ export default function SigninPage() {
 
         if (data?.session) {
           console.log("Signin successful. Redirecting to home...");
-          router.push("/home"); // Fixed: redirected to /home instead of /
+          window.location.href = "/home"; // Hard redirect so session is fully committed before page loads
         }
       } else {
         // OTP Mode

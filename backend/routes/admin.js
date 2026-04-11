@@ -1,5 +1,6 @@
 import express from "express";
 import supabase from "../config/supabase.js";
+import { logAuditAction } from "../utils/audit.js";
 
 const router = express.Router();
 
@@ -118,10 +119,9 @@ router.post("/approve-user/:userId", checkAdmin, async (req, res) => {
     }
 
     // Log action
-    await supabase.from("audit_log").insert({
-      admin_id: req.id,
-      action: "APPROVE_USER",
-      target_user_id: userId,
+    await logAuditAction(req.id, "APPROVE_USER", userId, { 
+      name: data[0].name,
+      role: data[0].role 
     });
 
     // Dispatch Notification Email
@@ -159,6 +159,18 @@ router.post("/approve-user/:userId", checkAdmin, async (req, res) => {
       }
     } catch (emailErr) {
       console.warn("Failed to dispatch email for notification:", emailErr);
+    }
+
+    // Dispatch in-app notification
+    try {
+      const { sendNotification } = await import("../utils/notifications.js");
+      await sendNotification(userId, 'club_approved', {
+        club_name: data[0].name,
+        message: "Your club has been approved! You can now post events and content.",
+        link: "/home"
+      });
+    } catch (notifErr) {
+      console.error("Failed to send in-app notification:", notifErr);
     }
 
     res.status(200).json({
@@ -216,12 +228,7 @@ router.post("/suspend-user/:userId", checkAdmin, async (req, res) => {
     }
 
     // Log action
-    await supabase.from("audit_log").insert({
-      admin_id: req.id,
-      action: "SUSPEND_USER",
-      target_user_id: userId,
-      details: { reason }
-    });
+    await logAuditAction(req.id, "SUSPEND_USER", userId, { reason });
 
     res.status(200).json({
       message: "User suspended",
@@ -246,6 +253,9 @@ router.post("/unsuspend-user/:userId", checkAdmin, async (req, res) => {
     if (error) {
       return res.status(500).json({ error: error.message });
     }
+
+    // Log action
+    await logAuditAction(req.id, "UNSUSPEND_USER", userId);
 
     res.status(200).json({
       message: "User unsuspended",
@@ -295,6 +305,9 @@ router.delete("/remove-content/:contentId", checkAdmin, async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
+    // Log action
+    await logAuditAction(req.id, "REMOVE_CONTENT", contentId, { contentType });
+
     res.status(200).json({
       message: `${contentType} deleted successfully`,
     });
@@ -336,12 +349,7 @@ router.post("/set-role/:userId", checkSuperAdmin, async (req, res) => {
     if (error) return res.status(500).json({ error: error.message });
     
     // Log action
-    await supabase.from("audit_log").insert({
-      admin_id: req.id,
-      action: "SET_ROLE",
-      target_user_id: userId,
-      details: { role, permissions }
-    });
+    await logAuditAction(req.id, "SET_ROLE", userId, { role, permissions });
 
     res.status(200).json({ message: "Role updated", profile: data[0] });
   } catch (err) {
@@ -358,11 +366,8 @@ router.delete("/remove-user/:userId", checkSuperAdmin, async (req, res) => {
     
     await supabase.from("profiles").delete().eq("user_id", userId);
     
-    await supabase.from("audit_log").insert({
-      admin_id: req.id,
-      action: "REMOVE_USER",
-      target_user_id: userId
-    });
+    // Log action
+    await logAuditAction(req.id, "REMOVE_USER", userId);
 
     res.status(200).json({ message: "User removed permanently" });
   } catch (err) {
@@ -473,15 +478,114 @@ router.post("/profile/warn/:userId", checkModerator, async (req, res) => {
     // Increment warnings_count
     const { data, error } = await supabase.rpc('increment_warning', { user_id_param: userId });
     
-    // Log as audit
-    await supabase.from("audit_log").insert({
-        admin_id: req.id,
-        action: "WARN_USER",
-        target_user_id: userId,
-        details: { reason }
-    });
+    // Log action
+    await logAuditAction(req.id, "WARN_USER", userId, { reason });
 
     res.status(200).json({ message: "User warned" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Club Requests Management (Founder/Super Admin/Moderator)
+// ─────────────────────────────────────────────────────────────────────────────
+
+// GET all club requests
+router.get("/club-requests", checkModerator, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("club_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// APPROVE club request
+router.post("/club-requests/:id/approve", checkModerator, async (req, res) => {
+  const { id } = req.params;
+  try {
+    const { data: request, error: fetchErr } = await supabase
+      .from("club_requests")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (fetchErr || !request) return res.status(404).json({ error: "Request not found" });
+
+    // Update status
+    await supabase.from("club_requests").update({ status: "approved" }).eq("id", id);
+
+    // Send Email
+    try {
+      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        const nodemailer = await import("nodemailer");
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: process.env.SMTP_PORT || 587,
+          secure: process.env.SMTP_PORT === '465',
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+
+        await transporter.sendMail({
+          from: `"HMU Admin" <${process.env.SMTP_USER}>`,
+          to: request.club_email,
+          subject: "Your Club Request for HMU has been approved! 🎉",
+          html: `
+            <h2>Welcome, ${request.club_name}!</h2>
+            <p>Your request to join the HMU Platform has been approved by the administrative team.</p>
+            <p><strong>Next Step:</strong> You can now head over to the signup page and create your account using your official ID ending in <code>_vsp@gitam.in</code>.</p>
+            <p>If you don't have an ID with that format, please contact support.</p>
+            <p>We look forward to seeing your club's presence on the platform!</p>
+          `,
+        });
+      } else {
+        console.log(`[EMAIL MOCK] Approved club request for ${request.club_email}`);
+      }
+    } catch (emailErr) {
+      console.warn("Approval email failed to send:", emailErr);
+    }
+
+    res.status(200).json({ message: "Club request approved and email dispatched" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// REJECT club request
+router.post("/club-requests/:id/reject", checkModerator, async (req, res) => {
+  const { id } = req.params;
+  try {
+    await supabase.from("club_requests").update({ status: "rejected" }).eq("id", id);
+    res.status(200).json({ message: "Club request rejected" });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET all audit logs (Super Admin/Founder only)
+router.get("/audit-logs", checkSuperAdmin, async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from("audit_log")
+      .select(`
+        *,
+        admin:profiles!audit_log_admin_id_fkey(name, profile_image_url),
+        target:profiles!audit_log_target_user_id_fkey(name)
+      `)
+      .order("created_at", { ascending: false })
+      .limit(100);
+
+    if (error) return res.status(500).json({ error: error.message });
+    res.status(200).json(data);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

@@ -5,6 +5,10 @@ import { usePathname } from "next/navigation";
 import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
+import { ApprovalGuard } from "@/components/ApprovalGuard";
+import { supabase } from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { LogOutIcon } from "lucide-react";
 
 export default function AppLayout({
   children,
@@ -28,7 +32,11 @@ export default function AppLayout({
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
     { name: "Profile", href: "/profile/me", icon: UserIcon },
-  ];
+  ].filter(item => {
+    // Clubs can't see Communities/Connect
+    if (role === 'club' && item.name === 'Communities') return false;
+    return true;
+  });
 
   // Add Admin item if role matches
   const isAdmin = ['super_admin', 'founder', 'moderator', 'junior_moderator'].includes(role);
@@ -122,7 +130,9 @@ export default function AppLayout({
       {/* Main Content Area */}
       <main className="w-full h-full pt-16 md:pt-0 flex flex-col min-h-[calc(100vh-80px)] md:min-h-screen">
         <div className="flex-1">
-          {children}
+          <ApprovalGuard>
+            {children}
+          </ApprovalGuard>
         </div>
         
         {/* Footer */}

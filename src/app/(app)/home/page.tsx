@@ -21,36 +21,39 @@ export default function HomePage() {
   const [posts, setPosts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 // ... existing code ...
-  const [postTitle, setPostTitle] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  
-  // New States for Interactions
-  const [postComments, setPostComments] = useState<Record<string, any[]>>({});
-  const [commentLoading, setCommentLoading] = useState<Record<string, boolean>>({});
-  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
-  const [expandedComments, setExpandedComments] = useState<Set<string>>(new Set());
+  const [featuredEvents, setFeaturedEvents] = useState<any[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
 
-  const showPersonalityPrompt = !isAuthLoading && !has_completed_personality;
-  const tabs = ["All", "Events", "Questions", "Tips", "Utility", "Opinions"];
-  const canPostMedia = role === 'club' || role === 'super_admin' || role === 'founder';
-
-  const fetchPosts = async () => {
+  const fetchFeaturedEvents = async () => {
     try {
-      setIsLoading(true);
-      // Pass userId to get user_has_liked status
-      const data = await apiFetch(`/posts?userId=${user_id || ''}`);
-      if (data && data.posts) {
-        setPosts(data.posts);
-      }
-    } catch (error) {
-      console.error("Failed to fetch posts:", error);
+      setEventsLoading(true);
+      // Fetch events along with club details
+      const { data, error } = await supabase
+        .from('events')
+        .select(`
+          event_id,
+          title,
+          poster_url,
+          clubs (
+            club_name,
+            logo_url
+          )
+        `)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+      setFeaturedEvents(data || []);
+    } catch (err) {
+      console.error("Error fetching featured events:", err);
     } finally {
-      setIsLoading(false);
+      setEventsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchPosts();
+    fetchFeaturedEvents();
   }, [user_id]);
 
   const handleCreatePost = async () => {
@@ -211,25 +214,41 @@ export default function HomePage() {
         {/* Feed */}
         <div className="p-4 sm:p-6 space-y-4">
           
-          {/* Pinned Posts Section (Clubs/Events) - Minimized Form */}
+          {/* Pinned Posts Section (Clubs/Events) - Dynamic Form */}
           <div className="mb-6 space-y-2">
              <div className="flex items-center justify-between px-1">
                 <span className="text-[10px] font-black text-white/40 uppercase tracking-[0.2em]">Featured Events</span>
-                <Badge variant="outline" className="text-[9px] border-brand/20 bg-brand/5 text-brand px-1.5 py-0">LIVE</Badge>
+                <Badge variant="outline" className="text-[9px] border-emerald-500/20 bg-emerald-500/5 text-emerald-400 px-1.5 py-0">LIVE</Badge>
              </div>
              <div className="flex gap-3 overflow-x-auto hide-scrollbar pb-1">
-                {[
-                  { club: "Photography Club", content: "Campus Photowalk @ 6AM Saturday", icon: "📸" },
-                  { club: "V-Shop", content: "Happy Hour: 50% Off Shakes!", icon: "🥤" },
-                  { club: "Gitam Startup", content: "Pitch Night registration closing today.", icon: "💡" },
-                ].map((pinned, i) => (
-                   <div key={i} className="min-w-[180px] max-w-[180px] bg-card border border-border/40 rounded-xl p-3 flex flex-col gap-2 relative group cursor-pointer hover:border-brand/40 transition-all shadow-sm">
-                      <div className="flex items-center gap-2">
-                         <div className="w-5 h-5 rounded-md bg-brand/10 flex items-center justify-center text-[10px] grayscale group-hover:grayscale-0 transition-all">{pinned.icon}</div>
-                         <span className="text-[10px] font-bold text-white/70 group-hover:text-brand transition-colors truncate">{pinned.club}</span>
-                      </div>
-                      <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug">{pinned.content}</p>
-                   </div>
+                {eventsLoading ? (
+                  [1, 2, 3].map(i => (
+                    <div key={i} className="min-w-[180px] h-[80px] bg-card/50 border border-border/40 rounded-xl animate-pulse" />
+                  ))
+                ) : featuredEvents.length === 0 ? (
+                  <div className="w-full py-6 bg-card/30 border border-dashed border-border/40 rounded-xl flex items-center justify-center">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">No featured events today</p>
+                  </div>
+                ) : featuredEvents.map((evt, i) => (
+                   <Link key={evt.event_id} href={`/events/${evt.event_id}`}>
+                     <div className="min-w-[180px] max-w-[180px] bg-card border border-border/40 rounded-xl p-3 flex flex-col gap-2 relative group cursor-pointer hover:border-brand/40 transition-all shadow-sm">
+                        <div className="flex items-center gap-2">
+                           <div className="w-5 h-5 rounded-md bg-brand/10 flex items-center justify-center text-[10px] grayscale group-hover:grayscale-0 transition-all overflow-hidden border border-border/30">
+                              {evt.clubs?.logo_url ? (
+                                <img src={evt.clubs.logo_url} alt="" className="w-full h-full object-cover" />
+                              ) : (
+                                "📅"
+                              )}
+                           </div>
+                           <span className="text-[10px] font-bold text-white/70 group-hover:text-brand transition-colors truncate">
+                              {evt.clubs?.club_name || "Campus Event"}
+                           </span>
+                        </div>
+                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-snug group-hover:text-white transition-colors">
+                          {evt.title}
+                        </p>
+                     </div>
+                   </Link>
                 ))}
              </div>
           </div>

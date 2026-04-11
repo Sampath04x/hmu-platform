@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useUser } from "@/context/UserContext";
+import { formatDistanceToNow } from "date-fns";
 import { 
   Users, 
   Shield, 
@@ -11,7 +12,15 @@ import {
   Coffee, 
   PlusCircle, 
   UserCog,
-  LayoutDashboard
+  LayoutDashboard,
+  ScrollText,
+  UserCheck,
+  UserX,
+  Ban,
+  Trash2,
+  ShieldAlert,
+  KeySquare,
+  ShieldOff
 } from "lucide-react";
 import { 
   Card, 
@@ -32,7 +41,10 @@ export default function AdminPage() {
   const [stats, setStats] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingClubs, setPendingClubs] = useState<any[]>([]);
+  const [clubRequests, setClubRequests] = useState<any[]>([]);
   const [canteens, setCanteens] = useState<any[]>([]);
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
   
   const [newCanteen, setNewCanteen] = useState({
     name: "",
@@ -47,11 +59,12 @@ export default function AdminPage() {
   const canModerate = ["super_admin", "founder", "moderator"].includes(role);
   const canApproveEmails = ["super_admin", "founder", "moderator", "junior_moderator"].includes(role);
   const canManageClubs = ["super_admin", "founder", "moderator"].includes(role);
+  const canViewAudit = ["super_admin", "founder"].includes(role);
 
   useEffect(() => {
     const fetchData = async () => {
        try {
-          const [statsData, pendingData, canteensData] = await Promise.all([
+          const [statsData, pendingData, requestsData, canteensData] = await Promise.all([
              apiFetch("/admin/stats").catch(() => ({
                 totalUsers: 452,
                 pendingVerifications: 12,
@@ -59,11 +72,15 @@ export default function AdminPage() {
                 activeCanteens: 8
              })),
              apiFetch("/admin/pending-users").catch(() => []),
+             apiFetch("/admin/club-requests").catch(() => []),
              apiFetch("/canteens").catch(() => [])
           ]);
           setStats(statsData);
           if (Array.isArray(pendingData)) {
             setPendingClubs(pendingData.filter((u: any) => u.role === "club"));
+          }
+          if (Array.isArray(requestsData)) {
+            setClubRequests(requestsData.filter(r => r.status === "pending"));
           }
           if (Array.isArray(canteensData)) {
             setCanteens(canteensData);
@@ -77,13 +94,46 @@ export default function AdminPage() {
     fetchData();
   }, []);
 
+  const fetchAuditLogs = async () => {
+    if (!canViewAudit) return;
+    setAuditLoading(true);
+    try {
+      const data = await apiFetch("/admin/audit-logs");
+      if (Array.isArray(data)) setAuditLogs(data);
+    } catch (err) {
+      console.error("Failed to fetch audit logs", err);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
   const approveClub = async (userId: string) => {
     try {
       await apiFetch(`/admin/approve-user/${userId}`, { method: "POST" });
-      toast.success("Club approved successfully");
+      toast.success("Club account approved");
       setPendingClubs(prev => prev.filter(c => c.user_id !== userId));
     } catch (err) {
-      toast.error("Failed to approve club");
+      toast.error("Failed to approve club account");
+    }
+  };
+
+  const handleApproveRequest = async (id: string) => {
+    try {
+      await apiFetch(`/admin/club-requests/${id}/approve`, { method: "POST" });
+      toast.success("Application approved and email sent!");
+      setClubRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      toast.error("Failed to approve application");
+    }
+  };
+
+  const handleRejectRequest = async (id: string) => {
+    try {
+      await apiFetch(`/admin/club-requests/${id}/reject`, { method: "POST" });
+      toast.success("Application rejected");
+      setClubRequests(prev => prev.filter(r => r.id !== id));
+    } catch (err) {
+      toast.error("Failed to reject application");
     }
   };
 
@@ -122,12 +172,17 @@ export default function AdminPage() {
             Manage the campus ecosystem, verify members, and maintain the intrst community integrity.
           </p>
         </div>
-        <div className="flex gap-3">
-           <Button className="rounded-full bg-brand hover:bg-accent text-white h-12 px-6">
-             <LayoutDashboard className="w-5 h-5 mr-2" />
-             View Logs
-           </Button>
-        </div>
+        {canViewAudit && (
+          <div className="flex gap-3">
+            <Button
+              onClick={fetchAuditLogs}
+              className="rounded-full bg-brand hover:bg-accent text-white h-12 px-6"
+            >
+              <ScrollText className="w-5 h-5 mr-2" />
+              Load Audit Trail
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Stats Grid */}
@@ -140,12 +195,23 @@ export default function AdminPage() {
 
       {/* Main Controls */}
       <Tabs defaultValue={canModerate ? "moderation" : "approvals"} className="w-full">
-        <TabsList className="bg-card/50 border border-border/40 p-1 rounded-2xl h-14 mb-8">
-          {canApproveEmails && <TabsTrigger value="approvals" className="rounded-xl px-8 h-12">Email Approvals</TabsTrigger>}
-          {canModerate && <TabsTrigger value="moderation" className="rounded-xl px-8 h-12 data-[state=active]:bg-brand data-[state=active]:text-white">Moderation</TabsTrigger>}
-          {canManageAdmins && <TabsTrigger value="members" className="rounded-xl px-8 h-12">Members</TabsTrigger>}
-          {canManageClubs && <TabsTrigger value="clubs" className="rounded-xl px-8 h-12">Clubs</TabsTrigger>}
-          {canManageAdmins && <TabsTrigger value="roles" className="rounded-xl px-8 h-12">Permissions</TabsTrigger>}
+        <TabsList className="bg-card/50 border border-border/40 p-1 rounded-2xl h-14 mb-8 flex-wrap gap-1">
+          {canApproveEmails && <TabsTrigger value="approvals" className="rounded-xl px-6 h-12">Email Approvals</TabsTrigger>}
+          {canModerate && <TabsTrigger value="moderation" className="rounded-xl px-6 h-12 data-[state=active]:bg-brand data-[state=active]:text-white">Moderation</TabsTrigger>}
+          {canManageAdmins && <TabsTrigger value="members" className="rounded-xl px-6 h-12">Members</TabsTrigger>}
+          {canManageClubs && <TabsTrigger value="requests" className="rounded-xl px-6 h-12">Club Requests</TabsTrigger>}
+          {canManageClubs && <TabsTrigger value="clubs" className="rounded-xl px-6 h-12">Clubs</TabsTrigger>}
+          {canManageAdmins && <TabsTrigger value="roles" className="rounded-xl px-6 h-12">Permissions</TabsTrigger>}
+          {canViewAudit && (
+            <TabsTrigger
+              value="audit"
+              className="rounded-xl px-6 h-12 data-[state=active]:bg-purple-600 data-[state=active]:text-white"
+              onClick={fetchAuditLogs}
+            >
+              <ScrollText className="w-4 h-4 mr-2" />
+              Audit Trail
+            </TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="members" className="space-y-6 outline-none">
@@ -246,6 +312,54 @@ export default function AdminPage() {
                  </Card>
               </div>
            </div>
+        </TabsContent>
+
+        <TabsContent value="requests" className="space-y-6 outline-none">
+           <Card className="rounded-3xl border-border/40 bg-card/30 backdrop-blur-sm">
+              <CardHeader className="p-8">
+                 <CardTitle className="text-2xl font-dmserif font-bold">New Club Inquiries</CardTitle>
+                 <CardDescription>Review external organizations requesting official status on the platform.</CardDescription>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
+                 <div className="space-y-6">
+                    {clubRequests.length === 0 ? (
+                       <div className="text-center py-20 px-8 rounded-3xl border border-dashed border-white/10 bg-white/5">
+                          <Trophy className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                          <p className="text-muted-foreground font-medium">No new club inquiries at the moment.</p>
+                       </div>
+                    ) : (
+                       clubRequests.map((req) => (
+                         <div key={req.id} className="p-8 bg-zinc-950/40 rounded-[2.5rem] border border-border/40 space-y-6">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                               <div className="flex items-start gap-6">
+                                  <div className="w-16 h-16 rounded-[1.25rem] bg-indigo-500/10 flex items-center justify-center text-indigo-400">
+                                     <CheckCircle2 className="w-8 h-8" />
+                                  </div>
+                                  <div className="space-y-1">
+                                     <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 mb-2">{req.category}</Badge>
+                                     <h3 className="text-2xl font-dmserif font-bold text-white">{req.club_name}</h3>
+                                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                        <div className="flex items-center gap-1.5"><Users className="w-3.5 h-3.5" /> President: {req.president_name}</div>
+                                        <div className="flex items-center gap-1.5"><Shield className="w-3.5 h-3.5" /> {req.club_email}</div>
+                                     </div>
+                                  </div>
+                               </div>
+                               <div className="flex gap-2">
+                                  <Button onClick={() => handleRejectRequest(req.id)} variant="outline" className="rounded-full h-11 px-8 border-rose-500/30 text-rose-400 hover:bg-rose-500/10">Decline Application</Button>
+                                  <Button onClick={() => handleApproveRequest(req.id)} className="bg-brand hover:bg-accent text-white rounded-full h-11 px-10 font-bold">Verify & Email</Button>
+                               </div>
+                            </div>
+                            {req.description && (
+                               <div className="p-6 bg-white/5 rounded-2xl text-zinc-300 text-sm italic border-l-4 border-brand/40">
+                                 &ldquo;{req.description}&rdquo;
+                               </div>
+                            )}
+                         </div>
+                       ))
+                    )}
+                 </div>
+              </CardContent>
+           </Card>
         </TabsContent>
 
         <TabsContent value="canteens" className="space-y-6 outline-none">
@@ -368,7 +482,53 @@ export default function AdminPage() {
               </CardContent>
            </Card>
         </TabsContent>
-      </Tabs>
+        {canViewAudit && (
+          <TabsContent value="audit" className="space-y-6 outline-none">
+            <Card className="rounded-3xl border-border/40 bg-card/30 backdrop-blur-sm overflow-hidden">
+              <CardHeader className="p-8">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-4 rounded-2xl bg-purple-500/10 text-purple-400">
+                      <ScrollText className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-dmserif font-bold">Administrative Audit Trail</CardTitle>
+                      <CardDescription>Full log of all admin actions for oversight and accountability.</CardDescription>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={fetchAuditLogs}
+                    disabled={auditLoading}
+                    variant="outline"
+                    className="rounded-full h-10 px-6 border-border/60 text-sm"
+                  >
+                    {auditLoading ? "Refreshing..." : "↻ Refresh"}
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8 pt-0">
+                {auditLoading ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
+                  </div>
+                ) : auditLogs.length === 0 ? (
+                  <div className="text-center py-20 rounded-3xl border border-dashed border-white/10 bg-white/5">
+                    <ScrollText className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
+                    <p className="text-muted-foreground font-medium">No audit logs yet.</p>
+                    <p className="text-xs text-muted-foreground/60 mt-1">Actions will appear here as admins make changes.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {auditLogs.map((log) => (
+                      <AuditLogItem key={log.id} log={log} />
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+       </Tabs>
     </div>
   );
 }
@@ -549,4 +709,60 @@ function RoleItem({ email, role }: any) {
        <Button variant="ghost" className="text-rose-400 hover:text-rose-500 hover:bg-rose-500/10 rounded-xl h-10 px-4">Remove Access</Button>
     </div>
   )
+}
+
+const AUDIT_ACTION_META: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
+  APPROVE_USER:    { label: "Approved User",       icon: <UserCheck className="w-4 h-4" />,   color: "bg-emerald-500/15 text-emerald-400" },
+  REJECT_USER:     { label: "Rejected User",        icon: <UserX className="w-4 h-4" />,       color: "bg-rose-500/15 text-rose-400" },
+  SUSPEND_USER:    { label: "Suspended User",       icon: <Ban className="w-4 h-4" />,         color: "bg-amber-500/15 text-amber-400" },
+  UNSUSPEND_USER:  { label: "Unsuspended User",     icon: <ShieldOff className="w-4 h-4" />,   color: "bg-sky-500/15 text-sky-400" },
+  WARN_USER:       { label: "Warned User",          icon: <ShieldAlert className="w-4 h-4" />, color: "bg-orange-500/15 text-orange-400" },
+  REMOVE_CONTENT:  { label: "Removed Content",      icon: <Trash2 className="w-4 h-4" />,      color: "bg-red-500/15 text-red-400" },
+  REMOVE_USER:     { label: "Permanently Removed User", icon: <UserX className="w-4 h-4" />,  color: "bg-red-600/20 text-red-500" },
+  SET_ROLE:        { label: "Changed Role",         icon: <KeySquare className="w-4 h-4" />,   color: "bg-purple-500/15 text-purple-400" },
+  DELETE_EVENT:    { label: "Deleted Event",        icon: <Trash2 className="w-4 h-4" />,      color: "bg-rose-500/15 text-rose-400" },
+};
+
+function AuditLogItem({ log }: { log: any }) {
+  const meta = AUDIT_ACTION_META[log.action] || {
+    label: log.action.replace(/_/g, " "),
+    icon: <ScrollText className="w-4 h-4" />,
+    color: "bg-zinc-500/15 text-zinc-400",
+  };
+
+  return (
+    <div className="flex items-start gap-4 p-5 rounded-2xl bg-background/40 border border-border/30 hover:border-border/60 hover:bg-background/60 transition-all group">
+      {/* Action Icon */}
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${meta.color}`}>
+        {meta.icon}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-sm font-semibold text-white">{meta.label}</span>
+          {log.target?.name && (
+            <span className="text-xs text-muted-foreground">
+              → <span className="text-foreground font-medium">{log.target.name}</span>
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-3 mt-1 flex-wrap">
+          <span className="text-xs text-muted-foreground/80">
+            by <span className="text-foreground/70 font-medium">{log.admin?.name || "Unknown Admin"}</span>
+          </span>
+          {log.details && Object.keys(log.details).length > 0 && (
+            <span className="text-[10px] font-mono bg-white/5 border border-white/10 rounded-md px-2 py-0.5 text-muted-foreground/60 max-w-xs truncate">
+              {JSON.stringify(log.details)}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* Timestamp */}
+      <div className="text-[10px] text-muted-foreground/50 uppercase tracking-wider shrink-0 text-right">
+        {formatDistanceToNow(new Date(log.created_at), { addSuffix: true })}
+      </div>
+    </div>
+  );
 }
