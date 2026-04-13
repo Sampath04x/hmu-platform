@@ -1,6 +1,7 @@
 import express from "express";
 import supabase from "../config/supabase.js";
 import { logAuditAction } from "../utils/audit.js";
+import { sendOTPEmail, sendNotificationEmail } from "../utils/email.js";
 
 const router = express.Router();
 
@@ -25,6 +26,10 @@ const checkRole = (allowedRoles = ['super_admin']) => {
         .select("role, permissions, is_admin")
         .eq("user_id", data.user.id)
         .single();
+
+      if (!profile) {
+        return res.status(403).json({ error: "Profile not found or access denied." });
+      }
 
       // Super admins and Founders always have full access for this middleware call usually
       if (profile.role === 'super_admin' || profile.role === 'founder') {
@@ -65,15 +70,13 @@ router.get("/stats", checkJuniorModerator, async (req, res) => {
     const { count: userCount } = await supabase.from("profiles").select("*", { count: "exact", head: true });
     const { count: pendingCount } = await supabase.from("profiles").select("*", { count: "exact", head: true }).eq("is_approved", false);
     const { count: canteenCount } = await supabase.from("canteens").select("*", { count: "exact", head: true });
-    
-    // In a real app we'd query a reports table, but for now we'll mock the last count
-    const reportedPlaybook = 8; 
+    const { count: reportedPlaybook } = await supabase.from("reports").select("*", { count: "exact", head: true });
 
     res.status(200).json({
       totalUsers: userCount || 0,
       pendingVerifications: pendingCount || 0,
       activeCanteens: canteenCount || 0,
-      reportedPosts: reportedPlaybook
+      reportedPosts: reportedPlaybook || 0
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -128,34 +131,15 @@ router.post("/approve-user/:userId", checkAdmin, async (req, res) => {
     try {
       const { data: userData } = await supabase.auth.admin.getUserById(userId);
       if (userData?.user?.email) {
-        const emailAddress = userData.user.email;
-        
-        if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-          const nodemailer = await import("nodemailer");
-          const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT || 587,
-            secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-            auth: {
-              user: process.env.SMTP_USER,
-              pass: process.env.SMTP_PASS,
-            },
-          });
-
-          await transporter.sendMail({
-            from: `"HMU Admin" <${process.env.SMTP_USER}>`,
-            to: emailAddress,
-            subject: "Your Club Request on HMU has been accepted! 🎉",
-            html: `
-              <h2>Welcome to HMU!</h2>
-              <p>Your club request has been officially accepted by the administrative team.</p>
-              <p>You can now log in and start managing your events, interacting with followers, and representing your club on the platform.</p>
-            `,
-          });
-          console.log(`[EMAIL DISPATCH] Real email sent to ${emailAddress}`);
-        } else {
-          console.log(`[EMAIL DISPATCH - MOCK] Sent to ${emailAddress}: "Your Club Request on HMU has been accepted! You can now log in and manage your club profile."`);
-        }
+        await sendNotificationEmail(
+          userData.user.email,
+          "Your Request on HMU has been accepted! 🎉",
+          `
+            <h2>Welcome to HMU!</h2>
+            <p>Your request has been officially accepted by the administrative team.</p>
+            <p>You can now log in and start managing your events, interacting with followers, and representing yourself on the platform.</p>
+          `
+        );
       }
     } catch (emailErr) {
       console.warn("Failed to dispatch email for notification:", emailErr);
@@ -294,6 +278,11 @@ router.delete("/remove-content/:contentId", checkAdmin, async (req, res) => {
       return res
         .status(400)
         .json({ error: "Content type is required (event, post, message)" });
+    }
+
+    const ALLOWED_TYPES = ['event', 'post', 'message', 'comment'];
+    if (!ALLOWED_TYPES.includes(contentType)) {
+      return res.status(400).json({ error: "Invalid content type" });
     }
 
     const { error } = await supabase
@@ -466,8 +455,19 @@ router.delete("/canteens/:id", checkModerator, async (req, res) => {
 
 // Accept a new community request
 router.post("/communities/approve/:id", checkModerator, async (req, res) => {
-    // Implementation for approving community
-    res.status(200).json({ message: "Community approved" });
+    const { id } = req.params;
+    try {
+      const { data, error } = await supabase
+        .from("communities")
+        .update({ status: "active" })
+        .eq("id", id)
+        .select();
+
+      if (error) return res.status(500).json({ error: error.message });
+      res.status(200).json({ message: "Community approved", community: data[0] });
+    } catch (err) {
+      res.status(500).json({ error: err.message });
+    }
 });
 
 // Warn a user profile
@@ -523,33 +523,17 @@ router.post("/club-requests/:id/approve", checkModerator, async (req, res) => {
 
     // Send Email
     try {
-      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
-        const nodemailer = await import("nodemailer");
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT || 587,
-          secure: process.env.SMTP_PORT === '465',
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASS,
-          },
-        });
-
-        await transporter.sendMail({
-          from: `"HMU Admin" <${process.env.SMTP_USER}>`,
-          to: request.club_email,
-          subject: "Your Club Request for HMU has been approved! 🎉",
-          html: `
-            <h2>Welcome, ${request.club_name}!</h2>
-            <p>Your request to join the HMU Platform has been approved by the administrative team.</p>
-            <p><strong>Next Step:</strong> You can now head over to the signup page and create your account using your official ID ending in <code>_vsp@gitam.in</code>.</p>
-            <p>If you don't have an ID with that format, please contact support.</p>
-            <p>We look forward to seeing your club's presence on the platform!</p>
-          `,
-        });
-      } else {
-        console.log(`[EMAIL MOCK] Approved club request for ${request.club_email}`);
-      }
+      await sendNotificationEmail(
+        request.club_email,
+        "Your Club Request for HMU has been approved! 🎉",
+        `
+          <h2>Welcome, ${request.club_name}!</h2>
+          <p>Your request to join the HMU Platform has been approved by the administrative team.</p>
+          <p><strong>Next Step:</strong> You can now head over to the signup page and create your account using your official ID ending in <code>_vsp@gitam.in</code>.</p>
+          <p>If you don't have an ID with that format, please contact support.</p>
+          <p>We look forward to seeing your club's presence on the platform!</p>
+        `
+      );
     } catch (emailErr) {
       console.warn("Approval email failed to send:", emailErr);
     }

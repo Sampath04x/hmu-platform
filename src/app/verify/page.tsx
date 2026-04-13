@@ -53,7 +53,6 @@ function VerifyContent() {
     }
 
     try {
-      console.log(`Verifying OTP for ${email} with type "${verifyType}" and token "${otp}"...`);
       const { data, error: verifyError } = await supabase.auth.verifyOtp({
         email,
         token: otp,
@@ -68,8 +67,6 @@ function VerifyContent() {
         });
         throw verifyError;
       }
-
-      console.log("OTP verified successfully. Checking profile status...");
       
       const session = data.session;
       const accessToken = session?.access_token;
@@ -79,7 +76,6 @@ function VerifyContent() {
       
       // We only initialize if it's a signup flow AND we have pending data
       if (verifyType === 'signup' && pendingProfileStr) {
-        console.log("Signup flow detected with pending profile, initializing...");
         try {
           const profileInfo = JSON.parse(pendingProfileStr);
           await apiFetch("/auth/initialize-profile", {
@@ -92,7 +88,6 @@ function VerifyContent() {
               username: profileInfo.username,
             }),
           });
-          console.log("Profile initialized.");
         } catch (initError) {
           console.error("Failed to initialize profile:", initError);
         }
@@ -107,14 +102,7 @@ function VerifyContent() {
 
       // 5. Check profile status to determine redirection
       try {
-        console.log("Fetching current profile status with fresh token...");
         const meData = await apiFetch("/auth/me", { token: accessToken });
-        
-        console.log("Me data received:", { 
-          hasProfile: !!meData?.profile,
-          dept: meData?.profile?.department,
-          year: meData?.profile?.year_of_study 
-        });
 
         // Determine if onboarding is truly needed
         const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
@@ -124,10 +112,8 @@ function VerifyContent() {
         const isSigninFlow = verifyType === "email" || verifyType === "magiclink";
 
         if (hasCompletedOnboarding || isSigninFlow) {
-          console.log(`Redirecting to home (onboarding completed: ${hasCompletedOnboarding}, isSignin: ${isSigninFlow})...`);
           router.replace("/home");
         } else {
-          console.log("Incomplete profile. Redirecting to onboarding...");
           router.replace("/onboarding");
         }
       } catch (meError) {
@@ -152,7 +138,6 @@ function VerifyContent() {
     setResendLoading(true);
     setError(null);
     try {
-      console.log(`Attempting to resend OTP for ${email} with type ${verifyType}...`);
       
       let resendError;
       

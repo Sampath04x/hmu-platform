@@ -64,7 +64,7 @@ router.post("/", verifyAuth, async (req, res) => {
         ended_at,
         poster_url,
         location,
-        club_id: profile.name, // Use the profile name as club_id
+        club_id: userId, // Use the proper ID, not string
         created_by: userId,
       },
     ])

@@ -62,3 +62,20 @@ export const sendOTPEmail = async (email, otp) => {
     return false;
   }
 };
+
+export const sendNotificationEmail = async (email, subject, htmlContent) => {
+  const mailOptions = {
+    from: `"HMU Admin" <${process.env.EMAIL_USER}>`,
+    to: email,
+    subject: subject,
+    html: htmlContent,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.error("Notification email send failed:", error);
+    return false;
+  }
+};

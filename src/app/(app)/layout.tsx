@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
 import { ApprovalGuard } from "@/components/ApprovalGuard";
@@ -16,7 +17,49 @@ export default function AppLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const { name, aiProfile, role } = useUser();
+  const { name, username, aiProfile, role } = useUser();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session?.user?.id) return;
+        
+        const { count, error } = await supabase
+          .from('notifications')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', session.user.id)
+          .eq('read_status', false);
+          
+        if (!error && count !== null) {
+          setUnreadCount(count);
+        }
+      } catch (e) {
+        console.error("Error fetching notification count", e);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Subscribe to new notifications
+    const channel = supabase
+      .channel('schema-db-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'notifications'
+        },
+        () => fetchUnreadCount()
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   interface NavItem {
     name: string;
@@ -60,7 +103,9 @@ export default function AppLayout({
           </button>
           <Link href="/notifications" className="relative text-muted-foreground hover:text-white transition-colors">
             <BellIcon className="w-6 h-6" />
-            <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
+            {unreadCount > 0 && (
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
+            )}
           </Link>
         </div>
       </header>
@@ -119,7 +164,7 @@ export default function AppLayout({
                 </Avatar>
                 <div className="hidden lg:block overflow-hidden">
                   <div className="font-medium text-sm text-white truncate">{name}</div>
-                  <div className="text-xs text-muted-foreground truncate">@{name.toLowerCase().replace(/\s+/g, '.')}</div>
+                  <div className="text-xs text-muted-foreground truncate">@{username || name.toLowerCase().replace(/\s+/g, '.')}</div>
                 </div>
               </>
             )}
@@ -168,7 +213,6 @@ export default function AppLayout({
                         <span>Contact Us</span>
                     </a>
                   </li>
-                  <li className="hover:text-white transition-colors hover:underline"><Link href="/careers">Careers</Link></li>
                 </ul>
               </div>
             </div>

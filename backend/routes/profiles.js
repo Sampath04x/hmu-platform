@@ -5,7 +5,7 @@ import { verifyAuth } from "../utils/auth.js";
 const router = express.Router();
 
 // GET user profile by ID
-router.get("/:userId", async (req, res) => {
+router.get("/:userId", verifyAuth, async (req, res) => {
   const { userId } = req.params;
 
   if (!userId) {
@@ -23,6 +23,14 @@ router.get("/:userId", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
+    if (req.user && req.user.id !== userId) {
+      delete data.phone;
+      delete data.personality_responses;
+      delete data.ai_profile;
+      delete data.suspension_reason;
+      // Depending on privacy_settings, could delete gender/department too
+    }
+
     res.json(data);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -30,7 +38,7 @@ router.get("/:userId", async (req, res) => {
 });
 
 // GET all users with optional search and filtering
-router.get("/", async (req, res) => {
+router.get("/", verifyAuth, async (req, res) => {
   const { search, department, year, role, is_approved } = req.query;
 
   try {
@@ -62,7 +70,17 @@ router.get("/", async (req, res) => {
       return res.status(500).json({ error: error.message });
     }
 
-    res.json(data);
+    const sanitizedData = data.map(profile => {
+      if (req.user && req.user.id !== profile.user_id) {
+        delete profile.phone;
+        delete profile.personality_responses;
+        delete profile.ai_profile;
+        delete profile.suspension_reason;
+      }
+      return profile;
+    });
+
+    res.json(sanitizedData);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -77,7 +95,7 @@ router.put("/:userId", verifyAuth, async (req, res) => {
   // Fix year_of_study parsing
   if (typeof year_of_study === 'string') {
     year_of_study = parseInt(year_of_study, 10);
-    if (isNaN(year_of_study)) year_of_study = 6; // Default to Ph.D. if invalid
+    if (isNaN(year_of_study)) return res.status(400).json({ error: "Invalid year_of_study" });
   }
 
   // Authorization check - users can only update their own profile
@@ -166,16 +184,11 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
   const { userId } = req.params;
   const { responses } = req.body; // e.g. { q1: 'Introvert', q2: 'Practical' }
 
-  console.log(`[POST /profiles/${userId}/personality] Received request`);
-  console.log("Responses:", responses);
-
   if (req.user.id !== userId) {
-    console.warn(`[POST /profiles/${userId}/personality] Access denied. req.user.id (${req.user.id}) !== userId (${userId})`);
     return res.status(403).json({ error: "Access denied" });
   }
 
   try {
-    console.log(`[POST /profiles/${userId}/personality] Updating Supabase...`);
     const { data, error } = await supabase
       .from("profiles")
       .update({
@@ -187,19 +200,15 @@ router.post("/:userId/personality", verifyAuth, async (req, res) => {
       .maybeSingle();
 
     if (error) {
-      console.error(`[POST /profiles/${userId}/personality] Supabase Error:`, error);
       return res.status(500).json({ error: error.message });
     }
 
     if (!data) {
-      console.warn(`[POST /profiles/${userId}/personality] Profile not found for user:`, userId);
       return res.status(404).json({ error: "Profile not found to update." });
     }
 
-    console.log(`[POST /profiles/${userId}/personality] Success. Profile updated.`);
     res.json({ message: "Character profile built!", profile: data });
   } catch (error) {
-    console.error(`[POST /profiles/${userId}/personality] Catch Error:`, error);
     res.status(500).json({ error: error.message });
   }
 });

@@ -75,33 +75,26 @@ export function PersonalityPrompt({ user_id, onComplete }: { user_id: string, on
   };
 
   const finishProfile = async (finalResponses: any) => {
-    console.log("[PersonalityPrompt] finishing profile for user:", user_id);
-    console.log("[PersonalityPrompt] final responses:", finalResponses);
     setIsFinishing(true);
     try {
       if (!user_id) {
-        console.error("[PersonalityPrompt] No user_id provided!");
         toast.error("User ID not found. Please log in again.");
         setIsFinishing(false);
         return;
       }
 
-      console.log("[PersonalityPrompt] calling apiFetch...");
       const result = await apiFetch(`/profiles/${user_id}/personality`, {
         method: "POST",
         body: JSON.stringify({ responses: finalResponses })
       });
-      console.log("[PersonalityPrompt] apiFetch result:", result);
 
       // Clear persistence on success
       localStorage.removeItem("personality_step");
       localStorage.removeItem("personality_responses");
 
       toast.success("Character Profile Built!");
-      console.log("[PersonalityPrompt] calling onComplete()");
       onComplete();
     } catch (err: any) {
-      console.error("[PersonalityPrompt] Error in finishProfile:", err);
       toast.error(err.message || "Failed to save personality data. Please try again.");
       setStep(0);
       setResponses({});

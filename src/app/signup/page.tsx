@@ -40,18 +40,14 @@ export default function SignupPage() {
     }
 
     try {
-      console.log("Starting signup process for:", formData.email);
       // 1. Check if username is available (via backend)
-      console.log("Checking username availability:", formData.username);
       try {
         const usernameCheck = await apiFetch(`/auth/check-username/${formData.username}`, { 
           requireAuth: false 
         });
-        console.log("Username check response:", usernameCheck);
         if (!usernameCheck.available) {
           throw new Error("Username is already taken.");
         }
-        console.log("Username is available.");
       } catch (checkErr: any) {
         console.error("Username check failed:", checkErr);
         if (checkErr.message === "Username is already taken.") throw checkErr;
@@ -59,7 +55,6 @@ export default function SignupPage() {
       }
 
       // 2. Sign up with Supabase
-      console.log("Registering with Supabase Auth...");
       const { data, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -69,8 +64,6 @@ export default function SignupPage() {
         console.error("Supabase Auth Error:", authError);
         throw authError;
       }
-
-      console.log("Supabase Auth success. User ID:", data.user?.id);
 
       // 3. Store initial profile data in sessionStorage for the /verify step
       // The verify step will use this to hit /auth/initialize-profile
@@ -83,7 +76,6 @@ export default function SignupPage() {
 
       // 4. Redirect to verification or onboarding
       if (data?.session) {
-        console.log("Immediate session detected. Initializing profile...");
         try {
           await apiFetch("/auth/initialize-profile", {
             method: "POST",
@@ -94,14 +86,12 @@ export default function SignupPage() {
               username: formData.username,
             }),
           });
-          console.log("Profile initialized. Redirecting to onboarding...");
         } catch (initErr) {
           console.error("Auto-initialization failed:", initErr);
         }
         router.push("/onboarding");
       } else {
         // Email confirmation is enabled, redirect to verify
-        console.log("Email confirmation required. Redirecting to /verify...");
         router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=signup`);
       }
     } catch (err: any) {
@@ -208,23 +198,7 @@ export default function SignupPage() {
             </Button>
           </form>
 
-          <div className="mt-6 flex items-center justify-between">
-            <span className="w-1/5 border-b border-zinc-800 lg:w-1/4"></span>
-            <span className="text-xs text-center text-zinc-500 uppercase">Or continue with</span>
-            <span className="w-1/5 border-b border-zinc-800 lg:w-1/4"></span>
-          </div>
 
-          <div className="mt-6">
-            <Button
-              variant="outline"
-              className="w-full border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800 text-zinc-300"
-              onClick={() => {
-                setError("OAuth is currently disabled while migrating to Supabase auth.");
-              }}
-            >
-              Log in with GitHub
-            </Button>
-          </div>
         </CardContent>
         <CardFooter className="flex flex-col gap-4 border-t border-zinc-800/50 pt-4 px-6">
           <p className="text-sm text-zinc-400">

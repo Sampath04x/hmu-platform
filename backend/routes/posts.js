@@ -11,9 +11,15 @@ router.get("/", async (req, res) => {
 
   try {
     // 1. Fetch posts with counts and author info
-    const { data: posts, error, count } = await supabase
+    let query = supabase
       .from("posts")
-      .select("*, profiles!user_id(name, profile_image_url, department, year_of_study), post_comments(count), post_likes(count)", { count: 'exact' })
+      .select("*, profiles!user_id(name, profile_image_url, department, year_of_study), post_comments(count), post_likes(count)", { count: 'exact' });
+
+    if (req.query.user_id) {
+      query = query.eq("user_id", req.query.user_id);
+    }
+
+    const { data: posts, error, count } = await query
       .order("created_at", { ascending: false })
       .range(Number(offset), Number(offset) + Number(limit) - 1);
 

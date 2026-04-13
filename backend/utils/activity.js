@@ -63,21 +63,14 @@ export async function hasReachedDailyLimit(userId, role = 'user') {
  * @param {number} pointsToAdd 
  */
 export async function trackActivity(userId, pointsToAdd = 1) {
-  const { data: profile, error } = await supabase
-    .from("profiles")
-    .select("daily_activity_count, points")
-    .eq("user_id", userId)
-    .single();
-
-  if (error || !profile) return;
-
-  await supabase
-    .from("profiles")
-    .update({
-      daily_activity_count: (profile.daily_activity_count || 0) + 1,
-      points: (profile.points || 0) + pointsToAdd,
-    })
-    .eq("user_id", userId);
+  const { error } = await supabase.rpc("increment_user_points", {
+    user_id_param: userId,
+    points_to_add: pointsToAdd
+  });
+  
+  if (error) {
+    console.error("Error in trackActivity RPC:", error.message);
+  }
 }
 
 /**

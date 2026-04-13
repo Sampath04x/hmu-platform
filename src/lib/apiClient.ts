@@ -16,9 +16,10 @@ export const getAuthToken = async () => {
 
 interface RequestOptions extends RequestInit {
   requireAuth?: boolean;
+  token?: string | null;
 }
 
-export const apiFetch = async (endpoint: string, options: RequestOptions & { token?: string | null } = {}) => {
+export const apiFetch = async (endpoint: string, options: RequestOptions = {}) => {
   const url = `${getApiUrl()}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const headers = new Headers(options.headers);
 
@@ -36,12 +37,10 @@ export const apiFetch = async (endpoint: string, options: RequestOptions & { tok
     }
   }
 
-  console.log(`[apiFetch] Requesting: ${url}`);
   const response = await fetch(url, {
     ...options,
     headers,
   });
-  console.log(`[apiFetch] Response status for ${endpoint}: ${response.status}`);
 
   if (!response.ok) {
     let errorMsg = 'An error occurred during the API request.';

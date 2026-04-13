@@ -1,25 +1,50 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useState, useEffect, useCallback } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2Icon, ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, Bell, Lock, Shield, UserIcon } from "lucide-react";
+import { CheckCircle2Icon, ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, Bell, Lock, Shield, UserIcon, Loader2 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
+import { apiFetch } from "@/lib/apiClient";
+import { formatDistanceToNow } from "date-fns";
+
+interface ProfileData {
+  name?: string;
+  bio?: string;
+  department?: string;
+  year_of_study?: number;
+  profile_image_url?: string;
+  role?: string;
+  points?: number;
+  daily_activity_count?: number;
+  interests?: Array<{ interests: { interest: string } }>;
+  privacy_settings?: any;
+}
+
+interface UserPost {
+  id: string;
+  content: string;
+  created_at: string;
+  post_type?: string;
+  post_likes?: { count: number };
+  post_comments?: { count: number };
+}
+
+interface Connection {
+  follower_id?: string;
+  following_id?: string;
+  profiles?: {
+    name: string;
+    profile_image_url: string;
+    role: string;
+  };
+}
 
 
-const posts = [
-  { tag: "TIP", tagColor: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20", content: "The Sarvana Bhavan near gate 2 is genuinely the best thing on this campus. The dosa is worth the 10 min walk.", likes: 45, comments: 12, time: "2h ago" },
-  { tag: "QUESTION", tagColor: "bg-violet-500/10 text-violet-400 border-violet-500/20", content: "Has anyone actually finished all the labs before the deadlines or is everyone just submitting at 11:59?", likes: 89, comments: 34, time: "1d ago" },
-];
-
-const connections = ["Arjun K.", "Riya M.", "Dev V.", "Ananya S.", "Karthik R.", "Shreya P."];
-const clubs = [
-  { name: "Photography Club", role: "Member", color: "from-brand to-accent" },
-  { name: "Startup Cell", role: "Core Team", color: "from-accent to-brand" },
-];
+// Mock data removed in favor of real API calls
 
 function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
   return (
@@ -33,14 +58,15 @@ function Toggle({ on, onToggle }: { on: boolean; onToggle: () => void }) {
 }
 
 export default function MyProfilePage() {
-  const { name, interests, role } = useUser();
+  const { user_id, name: contextName, interests: contextInterests, role: contextRole } = useUser();
   
-  const TABS = role === 'club' 
-    ? (["Posts", "Insights", "Settings"] as const)
-    : (["Posts", "Connections", "Clubs", "Settings"] as const);
-  
-  type Tab = typeof TABS[number];
-  const [activeTab, setActiveTab] = useState<Tab>("Posts" as Tab);
+  const [activeTab, setActiveTab] = useState("Posts");
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [userPosts, setUserPosts] = useState<UserPost[]>([]);
+  const [followers, setFollowers] = useState<Connection[]>([]);
+  const [following, setFollowing] = useState<Connection[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const [settings, setSettings] = useState({
     photoVisibility: false,
     deptVisibility: true,
@@ -49,7 +75,62 @@ export default function MyProfilePage() {
     eventReminders: true,
     messageRequests: false,
   });
-  const toggle = (k: keyof typeof settings) => setSettings(s => ({ ...s, [k]: !s[k] }));
+
+  const fetchData = useCallback(async () => {
+    if (!user_id) return;
+    setLoading(true);
+    try {
+      const [prof, postsRes, followersRes, followingRes] = await Promise.all([
+        apiFetch(`/profiles/${user_id}`),
+        apiFetch(`/posts?user_id=${user_id}`),
+        apiFetch(`/profiles/${user_id}/followers`),
+        apiFetch(`/profiles/${user_id}/following`)
+      ]);
+      
+      setProfile(prof);
+      setUserPosts(postsRes.posts || []);
+      setFollowers(followersRes || []);
+      setFollowing(followingRes || []);
+      
+      if (prof.privacy_settings) {
+        setSettings(prev => ({ ...prev, ...prof.privacy_settings }));
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile data:", err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user_id]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const toggle = (k: keyof typeof settings) => {
+    const newSettings = { ...settings, [k]: !settings[k] };
+    setSettings(newSettings);
+    // Silent update to backend
+    apiFetch(`/profiles/${user_id}`, {
+      method: "PUT",
+      body: JSON.stringify({ privacy_settings: newSettings })
+    }).catch(console.error);
+  };
+
+  const name = profile?.name || contextName;
+  const interests = profile?.interests?.map(i => i.interests.interest) || contextInterests;
+  const role = profile?.role || contextRole;
+
+  const TABS = role === 'club' 
+    ? (["Posts", "Insights", "Settings"] as const)
+    : (["Posts", "Connections", "Clubs", "Settings"] as const);
+
+  if (loading && !profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-brand animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -62,19 +143,22 @@ export default function MyProfilePage() {
       {/* ─── Profile Header ─── */}
       <div className="px-4 sm:px-6 -mt-14 flex flex-col items-center text-center max-w-2xl mx-auto">
         <Avatar className="w-28 h-28 border-4 border-background shadow-2xl">
-          <AvatarFallback className="bg-gradient-to-br from-brand to-accent text-white text-4xl font-dmserif font-bold">{name[0]}</AvatarFallback>
+          <AvatarImage src={profile?.profile_image_url} alt={name} className="object-cover" />
+          <AvatarFallback className="bg-gradient-to-br from-brand to-accent text-white text-4xl font-dmserif font-bold">{name?.[0]}</AvatarFallback>
         </Avatar>
 
         <div className="mt-4 space-y-2 w-full">
           <h1 className="text-2xl font-dmserif font-bold text-white">{name}</h1>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            <span className="text-sm text-muted-foreground">ECE · 3rd Year</span>
+            <span className="text-sm text-muted-foreground">
+              {profile?.department || "Student"} {profile?.year_of_study ? `· ${profile.year_of_study}${profile.year_of_study === 1 ? 'st' : profile.year_of_study === 2 ? 'nd' : profile.year_of_study === 3 ? 'rd' : 'th'} Year` : ""}
+            </span>
             <Badge variant="outline" className="border-blue-500/30 text-blue-400 gap-1 rounded-full text-xs px-2.5">
               <CheckCircle2Icon className="w-3 h-3" /> Verified
             </Badge>
           </div>
           <p className="text-muted-foreground text-sm max-w-xs mx-auto leading-relaxed">
-            Just trying to figure things out. Love photography, random conversations and bad horror movies.
+            {profile?.bio || "Just trying to figure things out."}
           </p>
 
           {/* Interest Tags */}
@@ -90,9 +174,9 @@ export default function MyProfilePage() {
         {/* ─── Stats Row ─── */}
         <div className="grid grid-cols-3 gap-3 mt-6 w-full">
           {[
-            ["24", "Connections"], 
-            ["12", "Posts"], 
-            ["156", "Points", "bg-brand/20 text-brand"]
+            [followers.length.toString(), "Connections"], 
+            [userPosts.length.toString(), "Posts"], 
+            [(profile?.points || 0).toString(), "Points", "bg-brand/20 text-brand"]
           ].map(([val, label, activeClass]) => (
             <div key={label} className={`bg-card border border-border/50 rounded-2xl py-4 text-center ${activeClass || ""}`}>
               <div className="text-xl font-dmserif font-bold text-white">{val}</div>
@@ -105,13 +189,18 @@ export default function MyProfilePage() {
         <div className="w-full mt-6 px-2">
            <div className="flex justify-between items-end mb-2">
               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Daily Activity Limit</span>
-              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">8 / 20 Used</span>
+              <span className="text-[10px] font-bold text-brand uppercase tracking-widest">
+                {profile?.daily_activity_count || 0} / {role === 'club' ? 100 : 20} Used
+              </span>
            </div>
            <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-              <div className="h-full bg-brand rounded-full w-[40%] shadow-[0_0_8px_rgba(194,105,42,0.5)]" />
+              <div 
+                className="h-full bg-brand rounded-full shadow-[0_0_8px_rgba(194,105,42,0.5)] transition-all duration-500" 
+                style={{ width: `${Math.min(100, ((profile?.daily_activity_count || 0) / (role === 'club' ? 100 : 20)) * 100)}%` }}
+              />
            </div>
            <p className="text-[9px] text-muted-foreground mt-2 italic text-left">
-              Limit resets in 14 hours. Points help unlock premium features.
+              Limit resets daily. Points help unlock premium features.
            </p>
         </div>
       </div>
@@ -196,56 +285,87 @@ export default function MyProfilePage() {
         {/* Tab Content — only one rendered at a time */}
         {activeTab === "Posts" && (
           <div className="space-y-4">
-            {posts.map((post, i) => (
+            {userPosts.map((post, i) => (
               <Card key={i} className="p-5 bg-card border-border/50 hover:border-brand/30 transition-colors">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`text-xs font-semibold border px-3 py-1 rounded-full ${post.tagColor}`}>{post.tag}</span>
-                  <span className="text-xs text-muted-foreground ml-auto">{post.time}</span>
+                  <span className={`text-[10px] font-bold tracking-widest px-3 py-1 rounded-full border border-brand/20 bg-brand/5 text-brand uppercase`}>
+                    {post.post_type || "POST"}
+                  </span>
+                  <span className="text-[10px] font-bold text-muted-foreground ml-auto uppercase tracking-tighter">
+                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  </span>
                 </div>
                 <p className="text-foreground leading-relaxed text-sm mb-4">{post.content}</p>
                 <div className="flex items-center gap-5 text-muted-foreground text-xs">
-                  <button className="flex items-center gap-1.5 hover:text-brand transition-colors">
-                    <ThumbsUpIcon className="w-4 h-4" /> {post.likes}
-                  </button>
-                  <button className="flex items-center gap-1.5 hover:text-accent transition-colors">
-                    <MessageCircleIcon className="w-4 h-4" /> {post.comments}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <ThumbsUpIcon className="w-4 h-4" /> {post.post_likes?.count || 0}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <MessageCircleIcon className="w-4 h-4" /> {post.post_comments?.count || 0}
+                  </div>
                   <div className="flex-1" />
-                  <button className="hover:text-white transition-colors">
-                    <BookmarkIcon className="w-4 h-4" />
-                  </button>
+                  <BookmarkIcon className="w-4 h-4" />
                 </div>
               </Card>
             ))}
+            {userPosts.length === 0 && (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground text-sm">You haven't posted anything yet.</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === "Connections" && (
           <div className="grid grid-cols-3 gap-3">
-            {connections.map((name, i) => (
-              <div key={i} className="flex flex-col items-center gap-2 p-4 bg-card border border-border/50 rounded-2xl hover:border-brand/30 transition-colors cursor-pointer group">
+            {followers.map((conn, i) => (
+              <Link 
+                key={i} 
+                href={`/profile/${conn.follower_id}`}
+                className="flex flex-col items-center gap-2 p-4 bg-card border border-border/50 rounded-2xl hover:border-brand/30 transition-colors cursor-pointer group"
+              >
                 <Avatar className="w-14 h-14 border border-border group-hover:border-brand/40 transition-colors">
-                  <AvatarFallback className="bg-muted text-foreground font-bold">{name[0]}</AvatarFallback>
+                  <AvatarImage src={conn.profiles?.profile_image_url} alt={conn.profiles?.name} />
+                  <AvatarFallback className="bg-muted text-foreground font-bold">{conn.profiles?.name?.[0]}</AvatarFallback>
                 </Avatar>
-                <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-white transition-colors leading-tight">{name}</span>
-              </div>
+                <span className="text-xs font-medium text-center text-muted-foreground group-hover:text-white transition-colors leading-tight line-clamp-1">
+                  {conn.profiles?.name}
+                </span>
+              </Link>
             ))}
+            {followers.length === 0 && (
+              <div className="col-span-3 py-12 text-center">
+                <p className="text-muted-foreground text-sm">No connections yet.</p>
+              </div>
+            )}
           </div>
         )}
 
         {activeTab === "Clubs" && (
           <div className="space-y-3">
-            {clubs.map((club, i) => (
-              <Card key={i} className="p-4 bg-card border-border/50 flex items-center gap-4 hover:border-brand/30 transition-colors">
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${club.color} text-white font-bold text-lg flex items-center justify-center shrink-0`}>
-                  {club.name[0]}
-                </div>
+            {following.filter(f => f.profiles?.role === 'club').map((f, i) => (
+              <Link 
+                key={i} 
+                href={`/profile/${f.following_id}`}
+                className="p-4 bg-card border-border/50 flex items-center gap-4 hover:border-brand/30 transition-colors rounded-2xl border"
+              >
+                <Avatar className="w-12 h-12 rounded-xl">
+                  <AvatarImage src={f.profiles?.profile_image_url} />
+                  <AvatarFallback className="bg-brand text-white font-bold text-lg rounded-xl">
+                    {f.profiles?.name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <h4 className="font-semibold text-white text-sm">{club.name}</h4>
-                  <p className="text-xs text-muted-foreground mt-0.5">{club.role}</p>
+                  <h4 className="font-semibold text-white text-sm">{f.profiles?.name}</h4>
+                  <p className="text-xs text-muted-foreground mt-0.5">Following</p>
                 </div>
-              </Card>
+              </Link>
             ))}
+            {following.filter((f: any) => f.profiles?.role === 'club').length === 0 && (
+              <div className="py-12 text-center">
+                <p className="text-muted-foreground text-sm">You haven't followed any clubs yet.</p>
+              </div>
+            )}
           </div>
         )}
 

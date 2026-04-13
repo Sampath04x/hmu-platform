@@ -1,5 +1,6 @@
 import express from "express";
 import supabase from "../config/supabase.js";
+import { verifyAuth } from "../utils/auth.js";
 
 const router = express.Router();
 
@@ -24,11 +25,15 @@ const isClubEmail = (email) => email.toLowerCase().endsWith("_vsp@gitam.in");
  * This endpoint is called by the frontend AFTER Supabase OTP verification is successful.
  * It ensures a profile exists in the public.profiles table with the correct initial role.
  */
-router.post("/initialize-profile", async (req, res) => {
+router.post("/initialize-profile", verifyAuth, async (req, res) => {
   const { user_id, email, name, username, interests, aiProfile, phone, club_details } = req.body;
 
   if (!user_id || !email || !username) {
     return res.status(400).json({ error: "Missing required profile data" });
+  }
+  
+  if (req.user.id !== user_id) {
+    return res.status(403).json({ error: "Forbidden: user_id mismatch" });
   }
 
   try {
@@ -71,7 +76,9 @@ router.post("/initialize-profile", async (req, res) => {
       .single();
 
     if (profileError) {
-      console.error("Profile Error:", profileError);
+      if (profileError.code === '23505' && profileError.message.includes('username')) {
+        return res.status(409).json({ error: "Username is already taken. Please choose another." });
+      }
       return res.status(500).json({ error: "Failed to initialize profile" });
     }
 
@@ -127,7 +134,6 @@ router.post("/initialize-profile", async (req, res) => {
 // CHECK USERNAME AVAILABILITY
 router.get("/check-username/:username", async (req, res) => {
   const { username } = req.params;
-  console.log(`Checking availability for username: ${username}`);
   try {
     const { data, error } = await supabase
       .from("profiles")
@@ -136,14 +142,11 @@ router.get("/check-username/:username", async (req, res) => {
       .maybeSingle();
 
     if (error) {
-      console.error("Username check query error:", error);
       return res.json({ available: true });
     }
 
-    console.log(`Username ${username} available: ${!data}`);
     res.json({ available: !data });
   } catch (error) {
-    console.error("Username check catch error:", error);
     res.json({ available: true }); // Assume available if error (e.g. not found)
   }
 });

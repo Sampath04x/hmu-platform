@@ -26,7 +26,17 @@ export const verifyAuth = async (req, res, next) => {
        return next();
     }
 
-    if (profile && profile.current_session_id && profile.current_session_id !== token.slice(-20)) {
+    // Extract session_id from JWT to prevent parallel logins
+    let jwtSessionId = null;
+    try {
+      const payloadBase64 = token.split('.')[1];
+      const payload = JSON.parse(Buffer.from(payloadBase64, 'base64').toString('utf8'));
+      jwtSessionId = payload.session_id;
+    } catch (e) {
+      console.warn("Could not parse JWT payload to extract session_id");
+    }
+
+    if (profile && profile.current_session_id && jwtSessionId && profile.current_session_id !== jwtSessionId) {
        return res.status(401).json({ error: "New login detected elsewhere. Please sign in again." });
     }
 

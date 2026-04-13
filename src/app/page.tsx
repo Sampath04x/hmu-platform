@@ -149,9 +149,9 @@ export default function LandingPage() {
             <h2 className="text-4xl font-dmserif font-bold text-center mb-12">Don&apos;t just take our word for it</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
-                { quote: "I talked to someone for 2 weeks before we revealed. Now they&apos;re one of my closest friends.", name: "Priya", college: "BITS Pilani" },
-                { quote: "The AI matched me with someone who had the exact same niche interests. Wild how accurate it was.", name: "Arjun", college: "VIT Vellore" },
-                { quote: "Found my entire friend group through the Photography Club. The anonymity takes all the pressure off.", name: "Riya", college: "SRM University" },
+                { quote: "I talked to someone for 2 weeks before we revealed. Now they&apos;re one of my closest friends.", name: "Priya", college: "GITAM University" },
+                { quote: "The AI matched me with someone who had the exact same niche interests. Wild how accurate it was.", name: "Arjun", college: "GITAM University" },
+                { quote: "Found my entire friend group through the Photography Club. The anonymity takes all the pressure off.", name: "Riya", college: "GITAM University" },
               ].map((t, i) => (
                 <Card key={i} className="p-7 bg-card flex flex-col justify-between border-border/50 glow-hover">
                   <p className="text-base italic text-muted-foreground mb-6 leading-relaxed">&ldquo;{t.quote}&rdquo;</p>

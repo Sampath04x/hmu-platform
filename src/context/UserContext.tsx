@@ -18,6 +18,8 @@ interface UserContextType {
   setName: (name: string) => void;
   email: string;
   setEmail: (email: string) => void;
+  username: string;
+  setUsername: (username: string) => void;
   role: 'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator';
   setRole: (role: 'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator') => void;
   has_completed_personality: boolean;
@@ -46,6 +48,7 @@ const UserContext = createContext<UserContextType | undefined>(undefined);
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [role, setRole] = useState<'user' | 'club' | 'founder' | 'super_admin' | 'moderator' | 'junior_moderator'>('user');
   const [has_completed_personality, setHasCompletedPersonality] = useState(false);
   const [user_id, setUserId] = useState("");
@@ -58,13 +61,8 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [isApproved, setIsApproved] = useState(false);
   const [isSuspended, setIsSuspended] = useState(false);
 
-  // Load from localStorage on mount
+  // Load from session on mount
   useEffect(() => {
-    const savedInterests = localStorage.getItem("intrst_interests");
-    const savedAiProfile = localStorage.getItem("intrst_ai_profile");
-    
-    if (savedInterests) setInterests(JSON.parse(savedInterests));
-    if (savedAiProfile) setAiProfile(JSON.parse(savedAiProfile));
 
     const checkUser = async (sessionToken: string | null) => {
       if (sessionToken) {
@@ -77,11 +75,13 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
             setUserId(data.user.id || "");
             if (data.profile) {
               setName(data.profile.name || "User");
+              setUsername(data.profile.username || "");
               setRole(data.profile.role || 'user');
               setPermissions(data.profile.permissions || {});
               setHasCompletedPersonality(data.profile.has_completed_personality || false);
               setIsApproved(data.profile.is_approved || false);
               setIsSuspended(data.profile.is_suspended || false);
+              if (data.profile.ai_profile) setAiProfile(data.profile.ai_profile);
             }
           } else {
             setIsLoggedIn(false);
@@ -107,9 +107,16 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
         const { data: authListener } = supabase.auth.onAuthStateChange(
           async (event, newSession) => {
             const newToken = newSession?.access_token || null;
-            setToken(newToken);
-            if (newToken !== currentToken) {
+            if (event === 'SIGNED_OUT') {
+               setToken(null);
+               setIsLoggedIn(false);
+               return;
+            }
+            if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
+               setToken(newToken);
                await checkUser(newToken);
+            } else if (event === 'TOKEN_REFRESHED') {
+               setToken(newToken);
             }
           }
         );
@@ -128,16 +135,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Save to localStorage on change
-  useEffect(() => {
-    if (interests.length > 0) localStorage.setItem("intrst_interests", JSON.stringify(interests));
-    if (aiProfile) localStorage.setItem("intrst_ai_profile", JSON.stringify(aiProfile));
-  }, [interests, aiProfile]);
 
   return (
     <UserContext.Provider value={{
       name, setName,
       email, setEmail,
+      username, setUsername,
       role, setRole,
       has_completed_personality, setHasCompletedPersonality,
       user_id, setUserId,

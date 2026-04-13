@@ -37,11 +37,10 @@ export default function SigninPage() {
     }
 
     try {
-      console.log(`Starting signin process for: ${formData.email} in mode: ${authMode}`);
+
       
       if (authMode === "password") {
         if (!formData.password) throw new Error("Please enter your password.");
-        console.log("Signing in with password...");
         const { data, error: authError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password,
@@ -53,12 +52,10 @@ export default function SigninPage() {
         }
 
         if (data?.session) {
-          console.log("Signin successful. Redirecting to home...");
           window.location.href = "/home"; // Hard redirect so session is fully committed before page loads
         }
       } else {
         // OTP Mode
-        console.log("Sending OTP to:", formData.email);
         const { error: authError } = await supabase.auth.signInWithOtp({
           email: formData.email,
         });
@@ -68,7 +65,6 @@ export default function SigninPage() {
           throw authError;
         }
         
-        console.log("OTP sent. Redirecting to /verify...");
         router.push(`/verify?email=${encodeURIComponent(formData.email)}&type=email`);
       }
     } catch (err: any) {
