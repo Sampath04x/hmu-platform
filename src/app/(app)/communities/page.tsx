@@ -37,8 +37,7 @@ export default function CommunitiesPage() {
         {/* Featured Utilities */}
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
           <Card className="overflow-hidden bg-white border border-black/5 p-6 relative group shadow-sm transition-all hover:shadow-md hover:border-neutral-300">
-            <Link href="/communities/vacant-classrooms" className="absolute inset-0 z-10" aria-label="Vacant Classrooms Locator"></Link>
-            <div className="flex items-center justify-between relative z-20">
+            <Link href="/communities/vacant-classrooms" className="flex items-center justify-between relative z-20">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
                   <Building2 className="w-7 h-7 text-[#505f78]" />
@@ -49,12 +48,11 @@ export default function CommunitiesPage() {
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-black group-hover:translate-x-1 transition-all" />
-            </div>
+            </Link>
           </Card>
 
           <Card className="overflow-hidden bg-white border border-black/5 p-6 relative group shadow-sm transition-all hover:shadow-md hover:border-neutral-300">
-            <Link href="/communities/professor-reviews" className="absolute inset-0 z-10" aria-label="Professor Reviews"></Link>
-            <div className="flex items-center justify-between relative z-20">
+            <Link href="/communities/professor-reviews" className="flex items-center justify-between relative z-20">
               <div className="flex items-center gap-4">
                 <div className="w-14 h-14 rounded-full bg-neutral-100 flex items-center justify-center shrink-0">
                   <UsersIcon className="w-7 h-7 text-[#855300]" />
@@ -65,7 +63,7 @@ export default function CommunitiesPage() {
                 </div>
               </div>
               <ChevronRight className="w-5 h-5 text-neutral-400 group-hover:text-black group-hover:translate-x-1 transition-all animate-none" />
-            </div>
+            </Link>
           </Card>
         </div>
       </div>

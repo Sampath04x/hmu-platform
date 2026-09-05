@@ -1,4 +1,14 @@
 import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+console.log("--- SMTP Configuration ---");
+console.log(`EMAIL_HOST: ${process.env.EMAIL_HOST || "smtp.gmail.com"}`);
+console.log(`EMAIL_PORT: ${process.env.EMAIL_PORT || "587"}`);
+console.log(`EMAIL_USER exists?: ${!!process.env.EMAIL_USER}`);
+console.log(`EMAIL_PASS exists?: ${process.env.EMAIL_PASS ? "**********" : "false"}`);
+console.log("--------------------------");
 
 /**
  * Configure your SMTP settings in .env
@@ -11,11 +21,20 @@ import nodemailer from "nodemailer";
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST || "smtp.gmail.com",
   port: parseInt(process.env.EMAIL_PORT || "587"),
-  secure: false, // true for 465, false for other ports
+  secure: parseInt(process.env.EMAIL_PORT) === 465, // true for 465, false for other ports
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS,
   },
+});
+
+// Verify connection configuration
+transporter.verify(function (error, success) {
+  if (error) {
+    console.error("⚠️ SMTP Connection Error:", error.message);
+  } else {
+    console.log("✅ SMTP Server is ready to take our messages");
+  }
 });
 
 export const sendOTPEmail = async (email, otp) => {
@@ -55,10 +74,21 @@ export const sendOTPEmail = async (email, otp) => {
   };
 
   try {
-    await transporter.sendMail(mailOptions);
+    console.log(`Attempting to send OTP email to: ${email}`);
+    const info = await transporter.sendMail(mailOptions);
+    console.log("Email sent successfully!");
+    console.log("Provider Response:", info.response);
+    console.log("Accepted recipients:", info.accepted);
+    console.log("Rejected recipients:", info.rejected);
+
+    if (info.rejected && info.rejected.length > 0) {
+      console.warn("Some recipients were rejected:", info.rejected);
+      return false;
+    }
+
     return true;
   } catch (error) {
-    console.error("Email send failed:", error);
+    console.error("Email send failed with exception:", error);
     return false;
   }
 };
@@ -71,11 +101,39 @@ export const sendNotificationEmail = async (email, subject, htmlContent) => {
     html: htmlContent,
   };
 
+  // try {
+  //   await transporter.sendMail(mailOptions);
+  //   return true;
+  // } catch (error) {
+  //   console.error("Notification email send failed:", error);
+  //   return false;
+  // }
   try {
-    await transporter.sendMail(mailOptions);
+    console.log("Sending OTP email to:", email);
+    
+    // Explicitly verify transporter BEFORE sending mail
+    await transporter.verify();
+
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log("Email sent successfully!");
+    console.log("Message ID:", info.messageId);
+    console.log("SMTP response:", info.response);
+
+    if (info.rejected && info.rejected.length > 0) {
+      console.warn("Some recipients were rejected:", info.rejected);
+      return false;
+    }
+
     return true;
   } catch (error) {
-    console.error("Notification email send failed:", error);
-    return false;
+    console.error("FULL EMAIL ERROR:");
+    console.error("error.code:", error.code);
+    console.error("error.response:", error.response);
+    console.error("error.command:", error.command);
+    console.error("error.message:", error.message);
+    console.error("error.stack:", error.stack);
+
+    throw error; // Let the route handle the failure
   }
 };

@@ -7,22 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star } from "lucide-react";
+import { Loader2, Send, CheckCircle2, ArrowLeft, Trophy, Users, Star, Clock, XCircle } from "lucide-react";
 import Link from "next/link";
-import { apiFetch } from "@/lib/apiClient";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { apiFetch } from "@/lib/apiClient";
 
-const DOMAINS = [
-  "Technical",
-  "Cultural",
-  "Sports",
-  "Literary",
-  "Social Service",
-  "Research",
-  "Entrepreneurship",
-  "Creative Arts"
-];
+import { INTEREST_TAGS } from "@/constants/interestTags";
 
 const buttonClickInteraction = {
   whileHover: { scale: 1.02, y: -1 },
@@ -32,28 +24,43 @@ const buttonClickInteraction = {
 
 export default function RedesignedClubRequestPage() {
   const router = useRouter();
+
   const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedDomains, setSelectedDomains] = useState<string[]>([]);
+  const [domainSearch, setDomainSearch] = useState("");
+
+  const [mode, setMode] = useState<"request" | "status_email" | "status_otp" | "status_result">("request");
+
+  const [statusEmail, setStatusEmail] = useState("");
+  const [statusOtp, setStatusOtp] = useState("");
+  const [statusResult, setStatusResult] = useState<{
+    status: string;
+    club_name: string;
+    created_at: string;
+    token?: string | null;
+  } | null>(null);
 
   const [formData, setFormData] = useState({
     club_name: "",
     club_email: "",
     president_name: "",
+    phone_number: "",
     description: "",
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    if (name === "description" && value.length > 200) return;
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleDomainToggle = (domain: string) => {
     if (selectedDomains.includes(domain)) {
       setSelectedDomains(prev => prev.filter(d => d !== domain));
     } else {
-      if (selectedDomains.length >= 3) {
-        toast.error("You can select up to 3 domains.");
+      if (selectedDomains.length >= 5) {
+        toast.error("You can select up to 5 domains.");
         return;
       }
       setSelectedDomains(prev => [...prev, domain]);
@@ -65,8 +72,10 @@ export default function RedesignedClubRequestPage() {
     setLoading(true);
     setError(null);
 
+    const normalizedEmail = formData.club_email.toLowerCase().trim();
+
     // Basic Validation
-    if (!formData.club_name || !formData.club_email || !formData.president_name) {
+    if (!formData.club_name || !normalizedEmail || !formData.president_name) {
       setError("Club name, email, and president name are required.");
       setLoading(false);
       return;
@@ -79,15 +88,57 @@ export default function RedesignedClubRequestPage() {
     }
 
     try {
-      await apiFetch("/auth/club-request", {
-        method: "POST",
-        requireAuth: false,
-        body: JSON.stringify({
-          ...formData,
-          category: selectedDomains.join(", ")
-        }),
-      });
-      setSubmitted(true);
+      // Check for existing request with this email
+      const { data: existing, error: checkError } = await supabase
+        .from("club_requests")
+        .select("id, status")
+        .eq("club_email", normalizedEmail)
+        .maybeSingle();
+
+      if (checkError) throw new Error(checkError.message);
+
+      if (existing) {
+        if (existing.status === "pending") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        if (existing.status === "approved") {
+          setError("This club email has already been approved. Please contact the admin if you need assistance.");
+          setLoading(false);
+          return;
+        }
+        // status === 'rejected': delete old record to allow resubmission
+        const { error: deleteError } = await supabase
+          .from("club_requests")
+          .delete()
+          .eq("id", existing.id);
+        if (deleteError) throw new Error(deleteError.message);
+      }
+
+      // Insert into public.club_requests
+      const { error: insertError } = await supabase
+        .from("club_requests")
+        .insert({
+          club_name: formData.club_name.trim(),
+          club_email: normalizedEmail,
+          president_name: formData.president_name.trim(),
+          category: selectedDomains.join(", "),
+          description: formData.description.trim(),
+          status: "pending",
+        });
+
+      if (insertError) {
+        // Unique constraint violation (race condition)
+        if (insertError.code === "23505") {
+          setError("A request with this email is already under review. Please wait for the admin to process it.");
+          setLoading(false);
+          return;
+        }
+        throw new Error(insertError.message);
+      }
+
+      router.push('/auth/club-request/submitted');
     } catch (err: any) {
       setError(err.message || "An error occurred while submitting your request.");
     } finally {
@@ -95,47 +146,55 @@ export default function RedesignedClubRequestPage() {
     }
   };
 
-  if (submitted) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-[#faf9f6] text-[#0f0f10] relative overflow-hidden">
-        {/* Background elements */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
-          <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-35" />
-        </div>
+  const handleSendStatusOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statusEmail.trim()) {
+      setError("Please enter your club email.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch("/auth/club-status/send-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: statusEmail }),
+      });
 
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="w-full max-w-md z-10"
-        >
-          <Card className="w-full border border-black/5 bg-white shadow-[0_24px_48px_rgba(0,0,0,0.03)] p-8 text-center space-y-6 rounded-[32px]">
-            <div className="flex justify-center">
-              <div className="w-20 h-20 rounded-full bg-[#855300]/10 border border-[#855300]/20 flex items-center justify-center text-[#855300]">
-                <CheckCircle2 className="w-10 h-10" />
-              </div>
-            </div>
-            <div className="space-y-3">
-              <h1 className="text-2xl font-dmserif font-bold text-[#0f0f10]">Application Received!</h1>
-              <p className="text-neutral-500 text-xs sm:text-sm leading-relaxed">
-                Thank you for your interest in joining the intrst community. Our team will review your application for <strong className="text-black font-semibold">{formData.club_name}</strong> and get back to you at <strong className="text-black font-semibold">{formData.club_email}</strong>.
-              </p>
-            </div>
-            <div className="pt-4 border-t border-black/5">
-              <Link href="/signin">
-                <motion.div {...buttonClickInteraction} className="inline-block">
-                  <Button className="rounded-full h-11 px-8 bg-black hover:bg-[#505f78] text-white font-bold group">
-                    Back to Login
-                  </Button>
-                </motion.div>
-              </Link>
-            </div>
-          </Card>
-        </motion.div>
-      </div>
-    );
-  }
+      toast.success(data.message); // Generic success message for privacy
+      setMode("status_otp");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyStatusOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!statusOtp.trim()) {
+      setError("Please enter the verification code.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await apiFetch("/auth/club-status/verify-otp", {
+        method: "POST",
+        body: JSON.stringify({ email: statusEmail, otp: statusOtp }),
+      });
+
+      if (data.session) {
+        await supabase.auth.setSession(data.session);
+      }
+
+      setStatusResult(data);
+      setMode("status_result");
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <main className="min-h-screen w-full flex items-start justify-center relative overflow-hidden p-6 pt-20 md:pt-24 lg:pt-32" style={{ backgroundColor: "#faf9f6" }}>
@@ -208,119 +267,316 @@ export default function RedesignedClubRequestPage() {
             <CardHeader className="p-0 mb-8 text-center sm:text-left">
               <div className="w-8 h-8 rounded-lg bg-black flex items-center justify-center text-white font-bold text-sm mb-3 mx-auto sm:mx-0">i</div>
               <CardTitle className="text-2xl font-bold tracking-tight text-[#0f0f10] mb-1.5">
-                Request <span className="font-serif italic font-normal text-[#505f78]">Access</span>
+                {mode === "request" && <>Register Your <span className="font-serif italic font-normal text-[#505f78]">Club</span></>}
+                {mode !== "request" && <>Check Request <span className="font-serif italic font-normal text-[#505f78]">Status</span></>}
               </CardTitle>
-              <CardDescription className="text-neutral-500 text-xs font-medium">Please provide your club details for manual verification.</CardDescription>
+              <CardDescription className="text-neutral-500 text-xs font-medium">
+                {mode === "request" && "Please provide your club details for manual verification."}
+                {mode === "status_email" && "Enter the email you used to request your club."}
+                {mode === "status_otp" && "Enter the verification code sent to your email."}
+                {mode === "status_result" && "Your current request status is displayed below."}
+              </CardDescription>
             </CardHeader>
 
             <CardContent className="p-0">
-              <form onSubmit={handleRequest} className="space-y-6">
-                {error && (
-                  <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
-                    {error}
-                  </div>
-                )}
+              {mode === "request" && (
+                <form onSubmit={handleRequest} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Name</Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="club_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Name</Label>
+                      <Input
+                        id="club_name"
+                        name="club_name"
+                        placeholder="e.g. Code Wizards"
+                        value={formData.club_name}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
+                      <Input
+                        id="club_email"
+                        name="club_email"
+                        type="email"
+                        placeholder="club@gitam.in"
+                        value={formData.club_email}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Name</Label>
+                      <Input
+                        id="president_name"
+                        name="president_name"
+                        placeholder="Full Name"
+                        value={formData.president_name}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="phone_number" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Representative Phone (Optional)</Label>
+                      <Input
+                        id="phone_number"
+                        name="phone_number"
+                        type="tel"
+                        placeholder="Phone Number"
+                        value={formData.phone_number}
+                        onChange={handleChange}
+                        className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Multi-select Club Domains */}
+                  <div className="space-y-2.5">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Domains (Select up to 5)</Label>
+                      <span className="text-[10px] font-bold text-[#855300] tracking-wide">
+                        {selectedDomains.length} / 5 selected
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2 pt-0.5 mb-3">
+                      {INTEREST_TAGS.slice(0, 6).map((item) => {
+                        const domain = item.tag;
+                        const isSelected = selectedDomains.includes(domain);
+                        return (
+                          <button
+                            type="button"
+                            key={domain}
+                            onClick={() => handleDomainToggle(domain)}
+                            className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${isSelected
+                              ? "bg-black border-black text-white shadow-sm"
+                              : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
+                              }`}
+                          >
+                            {domain}
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     <Input
-                      id="club_name"
-                      name="club_name"
-                      placeholder="e.g. Code Wizards"
-                      value={formData.club_name}
+                      placeholder="Search more domains..."
+                      value={domainSearch}
+                      onChange={(e) => setDomainSearch(e.target.value)}
+                      className="bg-white border-[#c5c6cd] rounded-xl h-10 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
+                    />
+
+                    {domainSearch.trim().length > 0 && (
+                      <div className="flex flex-wrap gap-2 pt-2 max-h-[140px] overflow-y-auto pr-1 hide-scrollbar">
+                        {INTEREST_TAGS.slice(6)
+                          .filter(d => d.tag.toLowerCase().includes(domainSearch.toLowerCase()))
+                          .map((item) => {
+                            const domain = item.tag;
+                            const isSelected = selectedDomains.includes(domain);
+                            return (
+                              <button
+                                type="button"
+                                key={domain}
+                                onClick={() => handleDomainToggle(domain)}
+                                className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 flex items-center gap-1.5 ${isSelected
+                                  ? "bg-black border-black text-white shadow-sm"
+                                  : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
+                                  }`}
+                              >
+                                {domain}
+                              </button>
+                            );
+                          })}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Short Description</Label>
+                      <span className="text-[10px] font-bold text-[#855300] tracking-wide">
+                        {formData.description.length} / 200
+                      </span>
+                    </div>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      placeholder="Briefly describe your club's mission and regular activities..."
+                      value={formData.description}
                       onChange={handleChange}
-                      className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                      required
+                      className="bg-white border-[#c5c6cd] rounded-xl min-h-[100px] focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                     />
                   </div>
+
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting Request...
+                        </>
+                      ) : (
+                        <>
+                          Submit Club Request
+                        </>
+                      )}
+                    </Button>
+                  </motion.div>
+
+                  <div className="pt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => { setError(null); setMode("status_email"); }}
+                      className="text-xs text-[#855300] font-bold underline hover:text-black transition-colors"
+                    >
+                      Already submitted a request? Check Request Status
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {mode === "status_email" && (
+                <form onSubmit={handleSendStatusOtp} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
                   <div className="space-y-1.5">
-                    <Label htmlFor="club_email" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
+                    <Label htmlFor="statusEmail" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Contact Email</Label>
                     <Input
-                      id="club_email"
-                      name="club_email"
+                      id="statusEmail"
                       type="email"
                       placeholder="club@gitam.in"
-                      value={formData.club_email}
-                      onChange={handleChange}
+                      value={statusEmail}
+                      onChange={(e) => setStatusEmail(e.target.value)}
                       className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
                       required
                     />
                   </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="president_name" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">President / Representative Name</Label>
-                  <Input
-                    id="president_name"
-                    name="president_name"
-                    placeholder="Full Name"
-                    value={formData.president_name}
-                    onChange={handleChange}
-                    className="bg-white border-[#c5c6cd] rounded-xl h-11 focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                    required
-                  />
-                </div>
-
-                {/* Multi-select Club Domains */}
-                <div className="space-y-2.5">
-                  <div className="flex justify-between items-center">
-                    <Label className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Club Domains (Select up to 3)</Label>
-                    <span className="text-[10px] font-bold text-[#855300] tracking-wide">
-                      {selectedDomains.length} / 3 selected
-                    </span>
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...</> : "Send Verification Code"}
+                    </Button>
+                  </motion.div>
+                  <div className="pt-4 flex justify-center">
+                    <button type="button" onClick={() => { setError(null); setMode("request"); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Back to New Request
+                    </button>
                   </div>
-                  <div className="flex flex-wrap gap-2 pt-0.5">
-                    {DOMAINS.map((domain) => {
-                      const isSelected = selectedDomains.includes(domain);
-                      return (
-                        <button
-                          type="button"
-                          key={domain}
-                          onClick={() => handleDomainToggle(domain)}
-                          className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all duration-200 ${isSelected
-                            ? "bg-black border-black text-white shadow-sm"
-                            : "bg-[#faf9f6] border-black/5 text-neutral-500 hover:bg-neutral-100 hover:border-black/10"
-                            }`}
-                        >
-                          {domain}
-                        </button>
-                      );
-                    })}
+                </form>
+              )}
+
+              {mode === "status_otp" && (
+                <form onSubmit={handleVerifyStatusOtp} className="space-y-6">
+                  {error && (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-xs font-medium">
+                      {error}
+                    </div>
+                  )}
+                  <div className="space-y-1.5">
+                    <Label htmlFor="statusOtp" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Verification Code</Label>
+                    <Input
+                      id="statusOtp"
+                      type="text"
+                      placeholder="Enter 6-digit code"
+                      value={statusOtp}
+                      onChange={(e) => setStatusOtp(e.target.value)}
+                      className="bg-white border-[#c5c6cd] rounded-xl h-11 text-center text-lg tracking-widest focus:border-black focus-visible:ring-0 text-[#0f0f10] font-bold"
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+                  <motion.div {...buttonClickInteraction} className="pt-2">
+                    <Button
+                      className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm flex items-center justify-center gap-2"
+                      type="submit"
+                      disabled={loading}
+                    >
+                      {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Verifying...</> : "Verify & Check Status"}
+                    </Button>
+                  </motion.div>
+                  <div className="pt-4 flex justify-center">
+                    <button type="button" onClick={() => { setError(null); setMode("status_email"); setStatusOtp(""); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Use a different email
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {mode === "status_result" && statusResult && (
+                <div className="space-y-8 text-center py-4">
+                  <div>
+                    <h3 className="text-lg font-bold text-[#0f0f10] mb-2">{statusResult.club_name}</h3>
+                    <p className="text-xs text-neutral-500">Submitted: {new Date(statusResult.created_at).toLocaleDateString()}</p>
+                  </div>
+
+                  {statusResult.status === "pending" && (
+                    <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <Clock className="w-8 h-8 text-amber-500" />
+                      <div>
+                        <h4 className="font-bold text-amber-800 text-sm">Under Review</h4>
+                        <p className="text-xs text-amber-700/80 mt-1">Your club request is currently under review by our admin team.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "rejected" && (
+                    <div className="bg-rose-50 border border-rose-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <XCircle className="w-8 h-8 text-rose-500" />
+                      <div>
+                        <h4 className="font-bold text-rose-800 text-sm">Not Approved</h4>
+                        <p className="text-xs text-rose-700/80 mt-1">Your club request was not approved.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "approved" && (
+                    <div className="bg-emerald-50 border border-emerald-200 p-6 rounded-2xl flex flex-col items-center gap-3">
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                      <div>
+                        <h4 className="font-bold text-emerald-800 text-sm">Approved!</h4>
+                        <p className="text-xs text-emerald-700/80 mt-1">Your club request has been approved and is ready to be set up.</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {statusResult.status === "approved" && (
+                    <Link href={statusResult.token ? `/auth/club-setup?token=${statusResult.token}` : `/auth/club-setup`}>
+                      <motion.div {...buttonClickInteraction} className="pt-4">
+                        <Button className="w-full bg-[#855300] hover:bg-[#6c4300] text-white font-bold h-12 rounded-full transition-all shadow-sm">
+                          Continue Club Setup
+                        </Button>
+                      </motion.div>
+                    </Link>
+                  )}
+
+                  <div className="pt-4 border-t border-black/5 flex justify-center">
+                    <button type="button" onClick={() => { setMode("request"); setStatusResult(null); setStatusEmail(""); setStatusOtp(""); }} className="text-xs text-neutral-500 font-bold hover:text-black transition-colors">
+                      Done
+                    </button>
                   </div>
                 </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="description" className="text-neutral-500 font-bold uppercase tracking-widest text-[9px]">Short Description</Label>
-                  <Textarea
-                    id="description"
-                    name="description"
-                    placeholder="Briefly describe your club's mission and regular activities..."
-                    value={formData.description}
-                    onChange={handleChange}
-                    className="bg-white border-[#c5c6cd] rounded-xl min-h-[100px] focus:border-black focus-visible:ring-0 text-[#0f0f10] placeholder:text-neutral-300 text-xs font-medium"
-                  />
-                </div>
-
-                <motion.div {...buttonClickInteraction} className="pt-2">
-                  <Button
-                    className="w-full bg-black hover:bg-[#505f78] text-white font-bold h-12 rounded-full transition-all shadow-sm group flex items-center justify-center gap-2"
-                    type="submit"
-                    disabled={loading}
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Submitting Request...
-                      </>
-                    ) : (
-                      <>
-                        Send Join Request
-                      </>
-                    )}
-                  </Button>
-                </motion.div>
-              </form>
+              )}
             </CardContent>
 
             <CardFooter className="bg-transparent p-0 mt-8 flex justify-center items-center border-0">

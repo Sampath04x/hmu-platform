@@ -32,6 +32,23 @@ export default function HomePage() {
   const [eventsLoading, setEventsLoading] = useState(true);
   const showPersonalityPrompt = !isAuthLoading && !has_completed_personality && !!user_id;
 
+  useEffect(() => {
+    console.log("PersonalityPrompt Debug:", {
+      showPersonalityPrompt,
+      isAuthLoading,
+      has_completed_personality,
+      user_id
+    });
+  }, [showPersonalityPrompt, isAuthLoading, has_completed_personality, user_id]);
+
+  const router = import("next/navigation").then(m => m.useRouter);
+
+  useEffect(() => {
+    if (!isAuthLoading && role === "club") {
+      window.location.href = "/club-dashboard";
+    }
+  }, [isAuthLoading, role]);
+
   const fetchPosts = async () => {
     try {
       setIsLoading(true);

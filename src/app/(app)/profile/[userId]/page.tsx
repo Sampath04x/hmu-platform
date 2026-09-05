@@ -55,7 +55,7 @@ export default function UserProfilePage() {
 
         setProfile(profileData);
         setEvents(eventsData || []);
-        
+
         const mappedPosts = (postsData?.posts || []).map((p: any) => ({
           ...p,
           likes_count: p.post_likes?.[0]?.count || 0,
@@ -126,18 +126,10 @@ export default function UserProfilePage() {
         <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-40" />
       </div>
 
-      <div className="relative z-10">
-        {/* Cover */}
-        <div className="h-44 md:h-52 bg-gradient-to-r from-[#505f78]/15 via-[#f3f1eb]/35 to-[#855300]/15 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#faf9f6]" />
-        </div>
-      </div>
-
       {/* Profile Header */}
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-16 flex flex-col items-center text-center">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-8 flex flex-col items-center text-center">
         <div className="relative">
-          <Avatar className="w-28 h-28 border-4 border-background shadow-2xl">
+          <Avatar className="w-28 h-28 border-4 border-white shadow-lg">
             {profile.profile_image_url ? (
               <img src={profile.profile_image_url} alt={profile.name} className="object-cover" />
             ) : (
@@ -165,7 +157,7 @@ export default function UserProfilePage() {
               </span>
             )}
             {isClub && (
-              <Badge variant="outline" className="border-[#505f78]/30 text-[#505f78] bg-[#505f78]/5 gap-1 rounded-full px-3">
+              <Badge variant="outline" className="border-[#505f78]/10 text-[#505f78] bg-[#505f78]/5 gap-1 rounded-full px-3 py-0.5 font-semibold text-xs shadow-none">
                 Official Club
               </Badge>
             )}
@@ -183,17 +175,16 @@ export default function UserProfilePage() {
             {currentUserRole !== 'club' && (
               <Button
                 onClick={handleFollowToggle}
-                variant={isFollowing ? "outline" : "default"}
-                className={`flex-1 h-12 font-semibold rounded-full gap-2 transition-all ${isFollowing
-                  ? "border border-black/10 text-neutral-800 hover:bg-[#f3f1eb]"
-                  : "bg-black hover:bg-[#505f78] text-white shadow-sm"
+                className={`flex-1 h-11 font-bold rounded-full gap-2 transition-all ${isFollowing
+                  ? "border border-black/10 bg-white text-black hover:bg-[#f3f1eb]"
+                  : "bg-black hover:bg-neutral-800 text-white shadow-sm"
                   }`}
               >
                 <UserPlusIcon className="w-4 h-4" />
                 {isFollowing ? (isClub ? "Unfollow" : "Connected") : (isClub ? "Follow" : "Connect")}
               </Button>
             )}
-            <Button variant="outline" className="flex-1 h-12 border border-black/10 text-neutral-800 hover:bg-[#f3f1eb] rounded-full gap-2 transition-all group">
+            <Button className="flex-1 h-11 border border-black/10 bg-white text-black hover:bg-[#f3f1eb] rounded-full gap-2 transition-all font-bold">
               <MessageSquareIcon className="w-4 h-4" /> Message
             </Button>
           </div>
@@ -201,15 +192,15 @@ export default function UserProfilePage() {
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mt-8 w-full max-w-sm">
-          <div className="bg-white border border-black/5 rounded-2xl py-4 px-2 text-center shadow-sm">
+          <div className="bg-white border border-black/5 rounded-2xl py-3.5 px-2 text-center shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="text-2xl font-dmserif font-bold text-[#0f0f10]">{profile?.followersCount || "0"}</div>
             <div className="text-xs text-neutral-500 mt-1">{isClub ? "Followers" : "Connections"}</div>
           </div>
-          <div className="bg-white border border-black/5 rounded-2xl py-4 px-2 text-center shadow-sm">
+          <div className="bg-white border border-black/5 rounded-2xl py-3.5 px-2 text-center shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="text-2xl font-dmserif font-bold text-[#0f0f10]">{posts.length}</div>
             <div className="text-xs text-neutral-500 mt-1">Posts</div>
           </div>
-          <div className="bg-white border border-black/5 rounded-2xl py-4 px-2 text-center shadow-sm">
+          <div className="bg-white border border-black/5 rounded-2xl py-3.5 px-2 text-center shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
             <div className="text-2xl font-dmserif font-bold text-[#0f0f10]">{events.length || "0"}</div>
             <div className="text-xs text-neutral-500 mt-1">Events</div>
           </div>
@@ -219,17 +210,17 @@ export default function UserProfilePage() {
       {/* Tabs */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-8">
         <Tabs defaultValue={isClub ? "events" : "posts"}>
-          <TabsList className="w-full bg-white border border-black/5 rounded-2xl p-1 h-auto gap-1 shadow-sm">
+          <TabsList className="w-full bg-white border border-black/5 rounded-full p-1 h-auto gap-1 shadow-sm">
             {isClub && (
-              <TabsTrigger value="events" className="flex-1 capitalize rounded-xl py-2 text-sm data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black transition-colors">
+              <TabsTrigger value="events" className="flex-1 capitalize rounded-full py-2 text-sm font-bold data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black hover:bg-[#f3f1eb] transition-all">
                 Events
               </TabsTrigger>
             )}
-            <TabsTrigger value="posts" className="flex-1 capitalize rounded-xl py-2 text-sm data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black transition-colors">
+            <TabsTrigger value="posts" className="flex-1 capitalize rounded-full py-2 text-sm font-bold data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black hover:bg-[#f3f1eb] transition-all">
               Posts
             </TabsTrigger>
             {!isClub && (
-              <TabsTrigger value="connections" className="flex-1 capitalize rounded-xl py-2 text-sm data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black transition-colors">
+              <TabsTrigger value="connections" className="flex-1 capitalize rounded-full py-2 text-sm font-bold data-[state=active]:bg-black data-[state=active]:text-white data-[state=active]:shadow-sm text-neutral-500 hover:text-black hover:bg-[#f3f1eb] transition-all">
                 Connections
               </TabsTrigger>
             )}
@@ -245,7 +236,7 @@ export default function UserProfilePage() {
                   const { dateStr, dayStr, timeStr } = formatDate(event.started_at);
 
                   return (
-                    <Card key={event.event_id} className="overflow-hidden bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all group flex flex-col sm:flex-row">
+                    <Card key={event.event_id} className="overflow-hidden bg-white border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:border-black/10 transition-all duration-300 group flex flex-col sm:flex-row">
                       <div className={`w-full sm:w-32 h-24 sm:h-auto flex-col items-center justify-center ${dateBlockBg} shrink-0 flex relative border-b sm:border-b-0 sm:border-r border-black/5`}>
                         <span className="text-[10px] font-bold text-neutral-500 tracking-widest">{dateStr}</span>
                         <span className="text-2xl font-dmserif font-bold text-[#0f0f10] mt-0.5">{dayStr.split(" ")[1] || "—"}</span>

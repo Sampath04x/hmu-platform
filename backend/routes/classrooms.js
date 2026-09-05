@@ -29,7 +29,7 @@ const authenticate = async (req, res, next) => {
 // Add a new classroom (Students/Admin)
 router.post("/", authenticate, async (req, res) => {
   try {
-    const { building_name, room_number, floor, semester } = req.body;
+    const { building_name, room_number, floor, room_type, display_name, semester } = req.body;
     const userId = req.user.id;
 
     // Fetch user role
@@ -46,12 +46,21 @@ router.post("/", authenticate, async (req, res) => {
     // For now, let's allow addition and tag it
     const isAutoVerified = ["founder", "super_admin", "moderator", "junior_moderator"].includes(profile.role);
 
-    const { data, error } = await supabase
+    const { data: existing } = await supabase.from("classrooms").select("id").eq("building_name", building_name).eq("display_name", display_name).maybeSingle();
+    if (existing) {
+      return res.status(409).json({
+        error: "This room already exists."
+      });
+    }
+
+    const { data: classroom, error } = await supabase
       .from("classrooms")
-      .insert([{ 
-        building_name, 
-        room_number, 
-        floor, 
+      .insert([{
+        building_name,
+        room_number,
+        floor,
+        room_type,
+        display_name,
         semester: semester || "Odd 2025",
         last_updated_by: userId,
         status: 'unknown'
@@ -60,11 +69,11 @@ router.post("/", authenticate, async (req, res) => {
       .single();
 
     if (error) throw error;
-    
+
     // Award activity points for adding a room (3 points)
     await trackActivity(userId, 3);
-    
-    res.json(data);
+
+    res.json(classroom);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -102,7 +111,7 @@ router.post("/bulk", authenticate, async (req, res) => {
 router.get("/", async (req, res) => {
   try {
     const { building } = req.query;
-    
+
     let query = supabase
       .from("classrooms")
       .select(`
@@ -131,27 +140,35 @@ router.get("/", async (req, res) => {
     if (error) throw error;
 
     // Filter active reports (not expired)
-    const processedData = data.map(room => {
-      const activeReport = room.classroom_reports?.find(r => new Date(r.expires_at) > new Date()) || null;
-      
-      let finalStatus = room.status;
-      let votes = { up: 0, down: 0 };
-      
-      if (activeReport) {
-        finalStatus = activeReport.status;
-        activeReport.classroom_votes?.forEach(v => {
-          if (v.vote_type) votes.up++;
-          else votes.down++;
-        });
-      }
+    const now = new Date();
 
-      return {
-        ...room,
-        current_report: activeReport,
-        live_status: finalStatus,
-        votes
-      };
-    });
+    const processedData = data
+      .map(room => {
+        const activeReport =
+          room.classroom_reports?.find(
+            r => new Date(r.expires_at) > now
+          ) || null;
+
+        let finalStatus = activeReport ? activeReport.status : "unknown";
+
+        let votes = { up: 0, down: 0 };
+
+        if (activeReport) {
+          activeReport.classroom_votes?.forEach(v => {
+            if (v.vote_type) votes.up++;
+            else votes.down++;
+          });
+        }
+
+        return {
+          ...room,
+          current_report: activeReport,
+          live_status: finalStatus,
+          votes,
+          expires_at: activeReport?.expires_at || null
+        };
+      })
+      .filter(room => room.current_report !== null);
 
     res.json(processedData);
   } catch (error) {
@@ -180,7 +197,12 @@ router.post("/report", authenticate, async (req, res) => {
     if (isLimitReached) {
       return res.status(429).json({ error: "Daily activity limit reached. Please try again tomorrow." });
     }
-
+    const expiresAt = new Date();
+    // Move to the next hour
+    expiresAt.setHours(expiresAt.getHours() + 1);
+    expiresAt.setMinutes(0);
+    expiresAt.setSeconds(0);
+    expiresAt.setMilliseconds(0); // 1 hour expiry
     // Create a new report
     const { data: report, error: reportError } = await supabase
       .from("classroom_reports")
@@ -189,7 +211,7 @@ router.post("/report", authenticate, async (req, res) => {
           classroom_id,
           reporter_id: userId,
           status,
-          expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString() // 1 hour expiry
+          expires_at: expiresAt.toISOString()
         }
       ])
       .select()
@@ -200,10 +222,10 @@ router.post("/report", authenticate, async (req, res) => {
     // Also update the main classroom status as a "cached" version
     await supabase
       .from("classrooms")
-      .update({ 
-        status: status, 
+      .update({
+        status: status,
         last_updated_at: new Date().toISOString(),
-        last_updated_by: userId 
+        last_updated_by: userId
       })
       .eq("id", classroom_id);
 

@@ -89,7 +89,7 @@ router.get("/", verifyAuth, async (req, res) => {
 // UPDATE user profile
 router.put("/:userId", verifyAuth, async (req, res) => {
   const { userId } = req.params;
-  const { name, username, bio, department, profile_image_url, gender, interests, privacy_settings } = req.body;
+  const { name, username, bio, department, profile_image_url, gender, interests, privacy_settings, email } = req.body;
   let { year_of_study } = req.body;
 
   // Fix year_of_study parsing
@@ -116,6 +116,7 @@ router.put("/:userId", verifyAuth, async (req, res) => {
       gender,
     };
     if (username) updatePayload.username = username.toLowerCase().trim();
+    if (email) updatePayload.email = email.toLowerCase().trim();
     if (privacy_settings) updatePayload.privacy_settings = privacy_settings;
     if (req.body.club_metadata) updatePayload.club_metadata = req.body.club_metadata;
 

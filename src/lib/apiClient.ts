@@ -1,7 +1,18 @@
 import { supabase } from './supabase';
 
 export const getApiUrl = () => {
-  let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+  let API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (!API_BASE_URL) {
+    if (process.env.NODE_ENV === 'production') {
+      // In production, fallback to the production API domain if environment variable is missing
+      API_BASE_URL = "https://api.intrst.in";
+    } else {
+      // In local development, default to localhost:5000
+      API_BASE_URL = "http://localhost:5000";
+    }
+  }
+
   API_BASE_URL = API_BASE_URL.replace(/\/api\/?$/, "").replace(/\/+$/, "");
   return API_BASE_URL;
 };

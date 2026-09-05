@@ -12,6 +12,7 @@ export const verifyAuth = async (req, res, next) => {
     const token = authHeader.replace("Bearer ", "");
     const { data, error } = await supabase.auth.getUser(token);
     if (error || !data.user) {
+      console.error("verifyAuth failed! error:", error, "data:", data);
       return res.status(401).json({ error: "Unauthorized" });
     }
 

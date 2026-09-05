@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon } from "lucide-react";
+import { HomeIcon, UsersIcon, MessageSquareIcon, CalendarIcon, UserIcon, BellIcon, SearchIcon, CoffeeIcon, ShieldCheckIcon, LayoutDashboardIcon, XIcon, LogOutIcon, LockIcon, Trash2Icon, ClipboardListIcon, CheckCircle2Icon, SettingsIcon, ScrollTextIcon, Building2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useUser } from "@/context/UserContext";
@@ -12,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { FaInstagram, FaGithub } from "react-icons/fa";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
+
+import { RoleGuard } from "@/components/RoleGuard";
 
 function ProfileMenu({ profileImageUrl, name, username, user_id }: { profileImageUrl: string | null, name: string, username: string, user_id?: string }) {
   const router = useRouter();
@@ -66,6 +68,11 @@ export default function AppLayout({
   const pathname = usePathname();
   const { name, username, aiProfile, role, user_id, profileImageUrl } = useUser();
   const [unreadCount, setUnreadCount] = useState(0);
+
+  const isAdminRoute = pathname.startsWith("/admin");
+  const displayProfileImageUrl = isAdminRoute ? null : profileImageUrl;
+  const displayName = isAdminRoute ? "Administrator" : name;
+  const displayUsername = isAdminRoute ? "admin" : username;
 
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -171,33 +178,60 @@ export default function AppLayout({
     roleRequired?: string[];
   }
 
-  const navItems: NavItem[] = [
+  let studentNavItems: NavItem[] = [
     { name: "Home", href: "/home", icon: HomeIcon },
     { name: "Communities", href: "/communities", icon: UsersIcon },
+    { name: "Connect", href: "/connect", icon: MessageSquareIcon, special: true },
     { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
     { name: "Events", href: "/events", icon: CalendarIcon },
-  ].filter(item => {
-    // Clubs can't see Communities/Connect
-    if (role === 'club' && item.name === 'Communities') return false;
-    return true;
-  });
+  ];
+
+  if (role === "club") {
+    studentNavItems = [
+      { name: "Dashboard", href: "/club-dashboard", icon: LayoutDashboardIcon },
+      { name: "Events", href: "/events", icon: CalendarIcon },
+      { name: "Canteens", href: "/canteens", icon: CoffeeIcon },
+    ];
+  }
 
   // Add Admin item if role matches
   const isAdmin = ['super_admin', 'founder', 'moderator', 'junior_moderator'].includes(role);
-  if (isAdmin) {
-    navItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
+  if (isAdmin && !isAdminRoute) {
+    studentNavItems.push({ name: "Admin", href: "/admin", icon: ShieldCheckIcon });
+  }
+
+
+  const adminNavItems: NavItem[] = [
+    { name: "Dashboard", href: "/admin", icon: LayoutDashboardIcon },
+    { name: "Clubs", href: "/admin/clubs", icon: ClipboardListIcon },
+    { name: "Events", href: "/admin/events", icon: CalendarIcon },
+    { name: "Classrooms", href: "/admin/classrooms", icon: Building2 },
+    { name: "User Management", href: "/admin/user-management", icon: UsersIcon },
+    { name: "Reports", href: "/admin/reports", icon: ScrollTextIcon },
+    { name: "Settings", href: "/admin/settings", icon: SettingsIcon },
+    { name: "Profile", href: "/admin/profile", icon: UserIcon },
+  ];
+  const navItems = isAdminRoute ? adminNavItems : studentNavItems;
+
+  if (isAdminRoute) {
+    return (
+      <RoleGuard>
+        <ApprovalGuard>{children}</ApprovalGuard>
+      </RoleGuard>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
+    <RoleGuard>
+      <div className="min-h-screen bg-background pb-[80px] md:pb-0 md:pl-[80px] lg:pl-[240px] relative overflow-x-hidden">
       {/* Background blobs (soft beige) */}
-      <div className="absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-      <div className="absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
-      <div className="absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-40" />
-      <div className="absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
+      <div className="pointer-events-none absolute -left-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
+      <div className="pointer-events-none absolute -right-40 top-0 w-[500px] h-[500px] rounded-full bg-[#e9e6df] blur-[120px] opacity-30" />
+      <div className="pointer-events-none absolute top-[35%] left-[-150px] w-[400px] h-[400px] rounded-full bg-[#f3f1eb] blur-[120px] opacity-40" />
+      <div className="pointer-events-none absolute top-[60%] right-[-150px] w-[400px] h-[400px] rounded-full bg-[#f0ede6] blur-[110px] opacity-35" />
       {/* Top Bar for Mobile */}
       <header className="fixed top-0 left-0 right-0 h-16 bg-white/40 backdrop-blur-xl border-b border-black/5 z-40 flex items-center justify-between px-4 md:hidden">
-        <Link href="/home" className="flex items-center gap-2">
+        <Link href={role === "club" ? "/club-dashboard" : "/home"} className="flex items-center gap-2">
           <div className="w-8 h-8 rounded-lg bg-brand flex items-center justify-center font-dmserif font-bold text-white tracking-widest text-xs">
             intrst
           </div>
@@ -216,14 +250,14 @@ export default function AppLayout({
               <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
             )}
           </Link>
-          <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
+          <ProfileMenu profileImageUrl={displayProfileImageUrl} name={displayName} username={displayUsername} user_id={isAdminRoute ? undefined : user_id} />
         </div>
       </header>
 
       {/* Side Nav for Desktop */}
       <aside className="fixed top-0 left-0 bottom-0 w-[80px] lg:w-[240px] bg-white/40 backdrop-blur-xl border-r border-black/5 z-40 hidden md:flex flex-col">
         <div className="h-16 flex items-center px-6 border-b border-black/5 shrink-0">
-          <Link href="/home" className="flex items-center gap-2">
+          <Link href={role === "club" ? "/club-dashboard" : "/home"} className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-brand shrink-0 flex items-center justify-center font-dmserif font-bold text-white tracking-widest text-xs">
               i
             </div>
@@ -268,16 +302,16 @@ export default function AppLayout({
               </>
             ) : (
               <>
-                {profileImageUrl ? (
-                  <img src={profileImageUrl} alt={name} className="w-10 h-10 rounded-full object-cover border border-black/5 shrink-0" />
+                {displayProfileImageUrl ? (
+                  <img src={displayProfileImageUrl} alt={displayName} className="w-10 h-10 rounded-full object-cover border border-black/5 shrink-0" />
                 ) : (
                   <Avatar className="w-10 h-10 border border-black/5 shrink-0">
-                    <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{name[0]?.toUpperCase() || 'U'}</AvatarFallback>
+                    <AvatarFallback className="bg-[#505f78]/10 text-[#505f78] font-bold">{displayName[0]?.toUpperCase() || 'U'}</AvatarFallback>
                   </Avatar>
                 )}
                 <div className="hidden lg:block overflow-hidden">
-                  <div className="font-medium text-sm text-[#0f0f10] truncate">{name}</div>
-                  <div className="text-xs text-neutral-500 truncate">@{username || name.toLowerCase().replace(/\s+/g, '.')}</div>
+                  <div className="font-medium text-sm text-[#0f0f10] truncate">{displayName}</div>
+                  <div className="text-xs text-neutral-500 truncate">@{displayUsername || displayName.toLowerCase().replace(/\s+/g, '.')}</div>
                 </div>
               </>
             )}
@@ -306,7 +340,7 @@ export default function AppLayout({
                 <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border border-background"></span>
               )}
             </Link>
-            <ProfileMenu profileImageUrl={profileImageUrl} name={name} username={username} user_id={user_id} />
+            <ProfileMenu profileImageUrl={displayProfileImageUrl} name={displayName} username={displayUsername} user_id={isAdminRoute ? undefined : user_id} />
           </div>
         </header>
         <div className="flex-1">
@@ -331,8 +365,8 @@ export default function AppLayout({
 
             {/* Links */}
             <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold text-neutral-400">
-              <Link href="/home" className="hover:text-black transition-colors">
-                Home
+              <Link href={role === "club" ? "/club-dashboard" : "/home"} className="hover:text-black transition-colors">
+                {role === "club" ? "Dashboard" : "Home"}
               </Link>
 
               <Link href="/canteens" className="hover:text-black transition-colors">
@@ -535,5 +569,6 @@ export default function AppLayout({
         </div>
       )}
     </div>
+    </RoleGuard>
   );
 }

@@ -2,19 +2,44 @@
 
 import Link from "next/link";
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation"; // ← ADDED
+import { useRouter } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2Icon, ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, Bell, Lock, Shield, UserIcon, Loader2, Users, GraduationCap, Building2 } from "lucide-react";
+import { CheckCircle2Icon, ThumbsUpIcon, MessageCircleIcon, BookmarkIcon, Bell, Lock, Shield, UserIcon, Loader2, Users, GraduationCap, Building2, Eye, EyeOff } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { apiFetch } from "@/lib/apiClient";
-import { supabase } from "@/lib/supabase"; // ← ADDED
+import { supabase } from "@/lib/supabase";
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { PostCard } from "@/components/PostCard";
 import { useDeleteAccount } from "@/hooks/useDeleteAccount";
+import { INTEREST_TAGS } from "@/constants/interestTags";
+
+const DEPARTMENTS = [
+  "CSE",
+  "ECE",
+  "Mechanical",
+  "Civil",
+  "EEE",
+  "IT",
+  "Chemical",
+  "Biotech",
+  "MBA",
+  "Law",
+  "Pharmacy",
+  "Architecture",
+];
+
+const YEARS = [
+  "1st Year",
+  "2nd Year",
+  "3rd Year",
+  "4th Year",
+  "5th Year",
+  "Ph.D.",
+];
 
 interface ProfileData {
   name?: string;
@@ -74,9 +99,14 @@ export default function MyProfilePage() {
   const [savedPosts, setSavedPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ← ADDED: password modal state
+  // Password modal states
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
   const [passwordLoading, setPasswordLoading] = useState(false);
   const [passwordMsg, setPasswordMsg] = useState("");
 
@@ -86,24 +116,42 @@ export default function MyProfilePage() {
     showYear: true,
     allowMessageRequests: false,
     girlsFirstProtection: true,
-    matchNotifs: true,      // ← add
-    eventReminders: true,   // ← add
+    matchNotifs: true,
+    eventReminders: true,
   });
 
   const [clubNameInput, setClubNameInput] = useState("");
   const [clubBioInput, setClubBioInput] = useState("");
   const [selectedClubDomains, setSelectedClubDomains] = useState<string[]>([]);
 
+  // Student Settings Form State
+  const [studentNameInput, setStudentNameInput] = useState("");
+  const [studentBioInput, setStudentBioInput] = useState("");
+  const [studentDeptInput, setStudentDeptInput] = useState("");
+  const [studentYearInput, setStudentYearInput] = useState("");
+  const [studentInterestsInput, setStudentInterestsInput] = useState<string[]>([]);
+
   useEffect(() => {
     if (profile) {
       setClubNameInput(profile.name || "");
       setClubBioInput(profile.bio || "");
       setSelectedClubDomains(profile.club_metadata?.domains || []);
+
+      setStudentNameInput(profile.name || "");
+      setStudentBioInput(profile.bio || "");
+      setStudentDeptInput(profile.department || "");
+      const yearStr = profile.year_of_study === 6 ? "Ph.D." :
+                      profile.year_of_study ? `${profile.year_of_study}${profile.year_of_study === 1 ? 'st' : profile.year_of_study === 2 ? 'nd' : profile.year_of_study === 3 ? 'rd' : 'th'} Year` : "";
+      setStudentYearInput(yearStr);
+      setStudentInterestsInput(profile.interests?.map(i => i.interests.interest) || []);
     }
   }, [profile]);
 
   const fetchData = useCallback(async () => {
-    if (!user_id) return;
+    if (!user_id) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     try {
       const [prof, postsRes, followersRes, followingRes] = await Promise.all([
@@ -211,6 +259,10 @@ export default function MyProfilePage() {
 
   // ← ADDED: change password handler
   const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      setPasswordMsg("New passwords do not match.");
+      return;
+    }
     setPasswordLoading(true);
     setPasswordMsg("");
     const timeout = setTimeout(() => {
@@ -219,7 +271,6 @@ export default function MyProfilePage() {
     }, 8000);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      // console.log("Session before update:", sessionData.session);
       if (!session) {
         clearTimeout(timeout);
         setPasswordMsg("No active session. Please log out and log back in first.");
@@ -228,13 +279,11 @@ export default function MyProfilePage() {
       }
       const { error } = await supabase.auth.updateUser({ password: newPassword });
       clearTimeout(timeout);
-      // console.log("Update error:", error);
-      // if (error) throw error;
-      // console.log("Session after update:", sessionData.session);
-      // const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       setPasswordMsg("Password updated successfully!");
+      setCurrentPassword("");
       setNewPassword("");
+      setConfirmNewPassword("");
       setPasswordLoading(false);
       setTimeout(() => {
         setShowPasswordModal(false);
@@ -244,6 +293,31 @@ export default function MyProfilePage() {
       clearTimeout(timeout);
       setPasswordMsg(err.message || "Failed to update password");
       setPasswordLoading(false);
+    }
+  };
+
+  // Student profile update helper
+  const handleSaveStudentDetails = async () => {
+    try {
+      let parsedYear = parseInt(studentYearInput);
+      if (studentYearInput === "Ph.D.") parsedYear = 6;
+      if (isNaN(parsedYear)) parsedYear = 1;
+
+      await apiFetch(`/profiles/${user_id}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          name: studentNameInput,
+          bio: studentBioInput,
+          department: studentDeptInput,
+          year_of_study: parsedYear,
+          interests: studentInterestsInput
+        })
+      });
+      toast.success("Profile updated successfully!");
+      fetchData();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Failed to update profile");
     }
   };
 
@@ -304,7 +378,7 @@ export default function MyProfilePage() {
         {/* ← ADDED: Password Modal */}
         {showPasswordModal && (
           <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white border border-black/5 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl">
+            <div className="bg-white border border-black/5 rounded-3xl p-6 w-full max-w-sm space-y-4 shadow-xl text-left">
               <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Change Password</h3>
 
               {passwordMsg && (
@@ -313,21 +387,78 @@ export default function MyProfilePage() {
                 </p>
               )}
 
-              <input
-                type="password"
-                placeholder="New password (min 6 characters)"
-                className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium bg-white"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-              />
+              {/* Current Password Field */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400">Current Password</label>
+                <div className="relative">
+                  <input
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 pr-10 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium bg-white"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                  >
+                    {showCurrentPassword ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </div>
+              </div>
 
-              <div className="flex gap-3">
+              {/* New Password Field */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400">New Password</label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="New password (min 6 characters)"
+                    className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 pr-10 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium bg-white"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                  >
+                    {showNewPassword ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Confirm New Password Field */}
+              <div className="space-y-1.5">
+                <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400">Confirm New Password</label>
+                <div className="relative">
+                  <input
+                    type={showConfirmNewPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 pr-10 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 placeholder:text-neutral-300 font-medium bg-white"
+                    value={confirmNewPassword}
+                    onChange={(e) => setConfirmNewPassword(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-black transition-colors"
+                  >
+                    {showConfirmNewPassword ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
                 <Button
                   variant="outline"
                   className="flex-1 rounded-full border border-black/10 bg-white text-black font-bold hover:bg-[#f3f1eb] transition-all text-xs h-10"
                   onClick={() => {
                     setShowPasswordModal(false);
+                    setCurrentPassword("");
                     setNewPassword("");
+                    setConfirmNewPassword("");
                     setPasswordMsg("");
                   }}
                 >
@@ -336,7 +467,7 @@ export default function MyProfilePage() {
                 <Button
                   className="flex-1 rounded-full bg-black hover:bg-neutral-800 text-white font-bold transition-all text-xs h-10 disabled:opacity-60 disabled:cursor-not-allowed"
                   onClick={handleChangePassword}
-                  disabled={passwordLoading || newPassword.length < 6}
+                  disabled={passwordLoading || newPassword.length < 6 || confirmNewPassword.length < 6 || !currentPassword}
                 >
                   {passwordLoading ? "Updating..." : "Update"}
                 </Button>
@@ -344,17 +475,11 @@ export default function MyProfilePage() {
             </div>
           </div>
         )}
-
-        {/* ─── Cover Banner ─── */}
-        <div className="h-44 bg-gradient-to-r from-[#505f78]/15 via-[#f3f1eb]/35 to-[#855300]/15 relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(#0000000a_1px,transparent_1px)] [background-size:20px_20px] opacity-30" />
-          <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-[#faf9f6]" />
-        </div>
       </div>
 
       {/* ─── Profile Header ─── */}
-      <div className="px-4 sm:px-6 -mt-14 flex flex-col items-center text-center max-w-2xl mx-auto">
-        <Avatar className="w-28 h-28 border-4 border-background shadow-2xl">
+      <div className="px-4 sm:px-6 pt-8 flex flex-col items-center text-center max-w-2xl mx-auto">
+        <Avatar className="w-28 h-28 border-4 border-white shadow-lg">
           <AvatarImage src={profile?.profile_image_url} alt={name} className="object-cover" />
           <AvatarFallback className="bg-[#efece6] text-[#0f0f10] text-4xl font-dmserif font-bold">{name?.[0]}</AvatarFallback>
         </Avatar>
@@ -362,20 +487,20 @@ export default function MyProfilePage() {
         <div className="mt-4 space-y-2 w-full">
           <h1 className="text-2xl font-dmserif font-bold text-[#0f0f10]">{name}</h1>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            <span className="text-sm text-neutral-500">
-              {profile?.department || "Student"} {profile?.year_of_study ? `· ${profile.year_of_study}${profile.year_of_study === 1 ? 'st' : profile.year_of_study === 2 ? 'nd' : profile.year_of_study === 3 ? 'rd' : 'th'} Year` : ""}
+            <span className="text-sm text-neutral-500 font-semibold">
+              {profile?.department || "Student"} {profile?.year_of_study ? `· ${profile.year_of_study === 6 ? 'Ph.D.' : `${profile.year_of_study}${profile.year_of_study === 1 ? 'st' : profile.year_of_study === 2 ? 'nd' : profile.year_of_study === 3 ? 'rd' : 'th'} Year`}` : ""}
             </span>
-            <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 gap-1 rounded-full text-xs px-2.5 shadow-sm">
-              <CheckCircle2Icon className="w-3 h-3" /> Verified
+            <Badge variant="outline" className="bg-[#505f78]/5 text-[#505f78] border-[#505f78]/10 gap-1 rounded-full text-xs px-2.5 shadow-none">
+              <CheckCircle2Icon className="w-3 h-3 text-[#505f78]" /> Verified
             </Badge>
           </div>
           <p className="text-neutral-500 text-sm max-w-xs mx-auto leading-relaxed">
-            {profile?.bio || "Just trying to figure things out."}
+            {profile?.bio || (profile?.department ? "" : "Just trying to figure things out.")}
           </p>
 
           <div className="flex flex-wrap justify-center gap-2 pt-2">
             {interests.map(tag => (
-              <span key={tag} className="bg-[#505f78]/5 text-[#505f78] border border-[#505f78]/10 rounded-full px-3 py-1 text-xs font-medium">
+              <span key={tag} className="bg-[#505f78]/5 text-[#505f78] border border-[#505f78]/10 rounded-full px-3 py-1 text-xs font-semibold">
                 {tag}
               </span>
             ))}
@@ -387,9 +512,9 @@ export default function MyProfilePage() {
           {[
             [followers.length.toString(), "Connections"],
             [userPosts.length.toString(), "Posts"],
-            [(profile?.points || 0).toString(), "Points", "bg-neutral-100 border border-black/5 text-neutral-900"]
-          ].map(([val, label, activeClass]) => (
-            <div key={label} className={`bg-white border border-black/5 rounded-2xl py-4 text-center shadow-sm ${activeClass || ""}`}>
+            [(profile?.points || 0).toString(), "Points"]
+          ].map(([val, label]) => (
+            <div key={label} className="bg-white border border-black/5 rounded-2xl py-3.5 text-center shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="text-xl font-dmserif font-bold text-[#0f0f10]">{val}</div>
               <div className="text-xs text-neutral-500 mt-0.5">{label}</div>
             </div>
@@ -422,16 +547,16 @@ export default function MyProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {/* Professor Reviews Card */}
           <div className={`p-5 rounded-2xl border transition-all duration-300 relative flex flex-col justify-between ${(!profile?.is_approved || userPosts.length === 0)
-            ? "bg-neutral-50 border-black/5 opacity-60"
-            : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
+            ? "bg-white/50 border-black/5 opacity-60 shadow-none"
+            : "bg-white border border-black/5 hover:border-black/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
             }`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Feedback Hub</span>
                 {(!profile?.is_approved || userPosts.length === 0) ? (
-                  <Badge variant="outline" className="text-[9px] bg-neutral-100 text-neutral-500 border-neutral-200">Locked</Badge>
+                  <Badge variant="outline" className="bg-[#505f78]/10 text-[#505f78] border-[#505f78]/20 text-[9px] font-bold rounded-full px-2 py-0.5 shadow-none">Locked</Badge>
                 ) : (
-                  <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-600/20 text-[9px]">Active</Badge>
+                  <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[9px] font-bold rounded-full px-2 py-0.5 shadow-none">Active</Badge>
                 )}
               </div>
               <h4 className="font-dmserif font-bold text-base text-[#0f0f10]">Professor Reviews</h4>
@@ -442,12 +567,12 @@ export default function MyProfilePage() {
 
             <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
               {(!profile?.is_approved || userPosts.length === 0) ? (
-                <span className="text-[10px] text-amber-700 font-semibold leading-tight flex items-center gap-1">
+                <span className="text-[10px] text-amber-700 font-bold leading-tight flex items-center gap-1">
                   🔒 Locked: Verification & 1 Post Required
                 </span>
               ) : (
                 <Link href="/communities/professor-reviews">
-                  <Button size="sm" className="bg-black hover:bg-[#505f78] text-white rounded-xl text-xs h-9 px-4 font-semibold">
+                  <Button size="sm" className="bg-black hover:bg-neutral-800 text-white rounded-full text-xs h-9 px-4 font-bold transition-all shadow-sm">
                     Access Reviews
                   </Button>
                 </Link>
@@ -457,16 +582,16 @@ export default function MyProfilePage() {
 
           {/* Vacant Class Reporting Card */}
           <div className={`p-5 rounded-2xl border transition-all duration-300 relative flex flex-col justify-between ${(!profile?.is_approved || userPosts.length === 0)
-            ? "bg-neutral-50 border-black/5 opacity-60"
-            : "bg-white border border-black/5 hover:border-neutral-300 hover:shadow-sm"
+            ? "bg-white/50 border-black/5 opacity-60 shadow-none"
+            : "bg-white border border-black/5 hover:border-black/10 hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
             }`}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-neutral-400">Classroom Tracker</span>
                 {(!profile?.is_approved || userPosts.length === 0) ? (
-                  <Badge variant="outline" className="text-[9px] bg-neutral-100 text-neutral-500 border-neutral-200">Locked</Badge>
+                  <Badge variant="outline" className="bg-[#505f78]/10 text-[#505f78] border-[#505f78]/20 text-[9px] font-bold rounded-full px-2 py-0.5 shadow-none">Locked</Badge>
                 ) : (
-                  <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-600/20 text-[9px]">Active</Badge>
+                  <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/20 text-[9px] font-bold rounded-full px-2 py-0.5 shadow-none">Active</Badge>
                 )}
               </div>
               <h4 className="font-dmserif font-bold text-base text-[#0f0f10]">Vacant Classroom Locator</h4>
@@ -477,12 +602,12 @@ export default function MyProfilePage() {
 
             <div className="mt-4 pt-4 border-t border-black/5 flex items-center justify-between">
               {(!profile?.is_approved || userPosts.length === 0) ? (
-                <span className="text-[10px] text-amber-700 font-semibold leading-tight flex items-center gap-1">
+                <span className="text-[10px] text-amber-700 font-bold leading-tight flex items-center gap-1">
                   🔒 Locked: Verification & 1 Post Required
                 </span>
               ) : (
                 <Link href="/communities/vacant-classrooms">
-                  <Button size="sm" className="bg-black hover:bg-[#505f78] text-white rounded-xl text-xs h-9 px-4 font-semibold">
+                  <Button size="sm" className="bg-black hover:bg-neutral-800 text-white rounded-full text-xs h-9 px-4 font-bold transition-all shadow-sm">
                     Locate Rooms
                   </Button>
                 </Link>
@@ -495,14 +620,14 @@ export default function MyProfilePage() {
       {/* ─── Tabs ─── */}
       <div className="max-w-2xl mx-auto px-4 sm:px-6 mt-8 pb-28">
         {/* Tab Switcher */}
-        <div className="flex bg-white border border-black/5 rounded-2xl p-1 gap-1 mb-6 shadow-sm">
+        <div className="flex bg-white border border-black/5 rounded-full p-1 gap-1 mb-6 shadow-sm">
           {TABS.map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 ${activeTab === tab
+              className={`flex-1 py-2 text-sm font-bold rounded-full transition-all duration-200 ${activeTab === tab
                 ? "bg-black text-white shadow-sm"
-                : "text-neutral-500 hover:text-black hover:bg-neutral-100"
+                : "text-neutral-500 hover:text-black hover:bg-[#f3f1eb]"
                 }`}
             >
               {tab}
@@ -516,18 +641,34 @@ export default function MyProfilePage() {
               <p className="text-neutral-500 text-center py-8">No posts yet.</p>
             ) : (
               userPosts.map((post) => (
-                <Card key={post.id} className="p-5 bg-white border border-black/5 rounded-2xl shadow-sm hover:shadow-md transition-all text-left">
-                  <Badge className="mb-3 rounded-full bg-[#505f78]/10 text-[#505f78] border border-[#505f78]/20" variant="outline">
-                    {post.post_type || "General"}
-                  </Badge>
-                  <p className="text-[#0f0f10] leading-relaxed mb-4">{post.content}</p>
-                  <div className="flex items-center gap-5 text-neutral-500 text-sm">
-                    <span className="flex items-center gap-1.5">
-                      <ThumbsUpIcon className="w-4 h-4" /> {post.post_likes?.[0]?.count || (post.post_likes as any)?.count || 0}
-                    </span>
-                    <span className="flex items-center gap-1.5">
-                      <MessageCircleIcon className="w-4 h-4" /> {post.post_comments?.[0]?.count || (post.post_comments as any)?.count || 0}
-                    </span>
+                <Card key={post.id} className="p-5 sm:p-6 bg-white/80 backdrop-blur-sm border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.04)] hover:bg-white hover:border-black/10 transition-all duration-300 text-left">
+                  <div className="flex justify-between items-center mb-3">
+                    <Badge className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      post.post_type === "EVENT" ? "bg-[#505f78]/10 text-[#505f78] border border-[#505f78]/20" :
+                      post.post_type === "QUESTION" ? "bg-[#855300]/10 text-[#855300] border border-[#855300]/20" :
+                      post.post_type === "TIP" ? "bg-emerald-600/10 text-emerald-700 border border-emerald-600/20" :
+                      post.post_type === "UTILITY" ? "bg-blue-600/10 text-blue-700 border border-blue-600/20" :
+                      post.post_type === "OPINION" ? "bg-rose-600/10 text-rose-700 border border-rose-600/20" :
+                      "bg-neutral-100 text-neutral-600 border border-black/5"
+                    }`} variant="outline">
+                      {post.post_type || "General"}
+                    </Badge>
+                    <span className="text-xs text-neutral-400 font-medium">{new Date(post.created_at).toLocaleDateString()}</span>
+                  </div>
+                  <p className="text-[#0f0f10] text-[15px] leading-relaxed mb-4">{post.content}</p>
+                  <div className="flex items-center gap-6 text-neutral-500">
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <div className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors">
+                        <ThumbsUpIcon className="w-4 h-4" />
+                      </div>
+                      {post.post_likes?.[0]?.count || (post.post_likes as any)?.count || 0}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs font-medium">
+                      <div className="p-1.5 rounded-full hover:bg-neutral-100 transition-colors">
+                        <MessageCircleIcon className="w-4 h-4" />
+                      </div>
+                      {post.post_comments?.[0]?.count || (post.post_comments as any)?.count || 0}
+                    </div>
                   </div>
                 </Card>
               ))
@@ -538,20 +679,20 @@ export default function MyProfilePage() {
         {activeTab === "Insights" && (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
-              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
+              <Card className="p-6 bg-white border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Followers</div>
                 <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">428</div>
                 <div className="text-xs text-emerald-600 font-bold mt-2">+12% from last week</div>
               </Card>
 
-              <Card className="p-6 bg-white border border-black/5 rounded-2xl shadow-sm">
-                <div className="text-sm font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
+              <Card className="p-6 bg-white border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                <div className="text-[10px] font-bold uppercase tracking-widest text-neutral-400 mb-4">Total Reach</div>
                 <div className="text-4xl font-dmserif font-bold text-[#0f0f10]">1.8k</div>
                 <div className="text-xs text-emerald-600 font-bold mt-2">+24% from last week</div>
               </Card>
             </div>
 
-            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm">
+            <Card className="p-8 bg-white border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">
                   Engagement Trends
@@ -580,7 +721,7 @@ export default function MyProfilePage() {
               </div>
             </Card>
 
-            <Card className="p-8 bg-white border border-black/5 rounded-2xl shadow-sm space-y-6">
+            <Card className="p-8 bg-white border border-black/5 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-6">
               <h3 className="font-dmserif text-xl font-bold text-[#0f0f10]">Top Interactions</h3>
               <div className="space-y-4">
                 {[
@@ -604,7 +745,7 @@ export default function MyProfilePage() {
         {activeTab === "Connections" && (
           <div className="space-y-6">
             {/* Greyed-out Connections coming soon placeholder */}
-            <Card className="p-8 bg-neutral-50/70 border border-dashed border-black/10 rounded-2xl text-center flex flex-col items-center justify-center space-y-4">
+            <Card className="p-8 bg-white/50 border border-dashed border-black/10 rounded-[24px] text-center flex flex-col items-center justify-center space-y-4">
               <div className="w-12 h-12 rounded-full bg-neutral-200/60 flex items-center justify-center text-neutral-400">
                 <Users className="w-6 h-6" />
               </div>
@@ -624,7 +765,7 @@ export default function MyProfilePage() {
                 {followers.map((conn, i) => (
                   <div
                     key={i}
-                    className="flex flex-col items-center gap-2 p-4 bg-white border border-black/5 rounded-2xl shadow-sm"
+                    className="flex flex-col items-center gap-2 p-4 bg-white border border-black/5 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.02)]"
                   >
                     <Avatar className="w-14 h-14 border border-border">
                       <AvatarImage src={conn.profiles?.profile_image_url} alt={conn.profiles?.name} />
@@ -646,7 +787,7 @@ export default function MyProfilePage() {
               <Link
                 key={i}
                 href={`/profile/${f.following_id}`}
-                className="p-4 bg-white border border-black/5 flex items-center gap-4 hover:border-neutral-300 transition-all rounded-2xl shadow-sm border"
+                className="p-4 bg-white border border-black/5 flex items-center gap-4 hover:border-black/10 hover:shadow-[0_4px_20px_rgba(0,0,0,0.02)] transition-all rounded-2xl shadow-sm"
               >
                 <Avatar className="w-12 h-12 rounded-xl">
                   <AvatarImage src={f.profiles?.profile_image_url} />
@@ -689,6 +830,101 @@ export default function MyProfilePage() {
 
         {activeTab === "Settings" && (
           <div className="space-y-8">
+            {/* Student Settings (Only for non-Club role) */}
+            {role !== 'club' && (
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <UserIcon className="w-4 h-4 text-[#505f78]" />
+                  <h3 className="font-dmserif font-semibold text-[#0f0f10]">Edit Profile</h3>
+                </div>
+                <Card className="bg-white border border-black/5 p-6 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)] space-y-6">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Display Name</label>
+                      <input
+                        type="text"
+                        value={studentNameInput || ""}
+                        onChange={(e) => setStudentNameInput(e.target.value)}
+                        className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#505f78] text-[#0f0f10] font-medium"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Bio</label>
+                      <textarea
+                        value={studentBioInput || ""}
+                        onChange={(e) => setStudentBioInput(e.target.value)}
+                        maxLength={200}
+                        className="w-full bg-white border border-black/10 rounded-xl px-4 py-2.5 text-sm outline-none focus:border-[#505f78] text-[#0f0f10] min-h-[80px] font-medium resize-none"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Department</label>
+                        <select
+                          value={studentDeptInput || ""}
+                          onChange={(e) => setStudentDeptInput(e.target.value)}
+                          className="w-full bg-white border border-black/10 rounded-xl h-11 px-4 text-sm text-[#0f0f10] outline-none font-medium cursor-pointer"
+                        >
+                          <option value="" disabled hidden>Select Department</option>
+                          {DEPARTMENTS.map(d => (
+                            <option key={d} value={d}>{d}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-1.5">Year of Study</label>
+                        <select
+                          value={studentYearInput || ""}
+                          onChange={(e) => setStudentYearInput(e.target.value)}
+                          className="w-full bg-white border border-black/10 rounded-xl h-11 px-4 text-sm text-[#0f0f10] outline-none font-medium cursor-pointer"
+                        >
+                          <option value="" disabled hidden>Select Year</option>
+                          {YEARS.map(y => (
+                            <option key={y} value={y}>{y}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest block mb-2">Interests (Select up to 10)</label>
+                      <div className="flex flex-wrap gap-2 max-h-40 overflow-y-auto p-1.5 border border-black/5 rounded-xl bg-neutral-50/50">
+                        {INTEREST_TAGS.map(({ tag }) => {
+                          const isSelected = studentInterestsInput.includes(tag);
+                          return (
+                            <button
+                              key={tag}
+                              type="button"
+                              onClick={() => {
+                                if (isSelected) {
+                                  setStudentInterestsInput(studentInterestsInput.filter(t => t !== tag));
+                                } else if (studentInterestsInput.length < 10) {
+                                  setStudentInterestsInput([...studentInterestsInput, tag]);
+                                } else {
+                                  toast.error("You can select up to 10 interests.");
+                                }
+                              }}
+                              className={`px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${isSelected
+                                ? "bg-black text-white border-black shadow-sm"
+                                : "bg-white text-neutral-500 border-black/10 hover:border-neutral-300"
+                                }`}
+                            >
+                              {tag}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={handleSaveStudentDetails}
+                    className="bg-black hover:bg-neutral-800 text-white rounded-full px-6 h-10 text-xs font-bold shadow-sm transition-all"
+                  >
+                    Save Profile Details
+                  </Button>
+                </Card>
+              </div>
+            )}
+
             {/* Club Settings & Domains (Only for Club role) */}
             {role === 'club' && (
               <div>
@@ -774,22 +1010,22 @@ export default function MyProfilePage() {
                 <Lock className="w-4 h-4 text-[#505f78]" />
                 <h3 className="font-dmserif font-semibold text-[#0f0f10]">Privacy Settings</h3>
               </div>
-              <div className="space-y-2">
+              <Card className="bg-white border border-black/5 rounded-[24px] divide-y divide-black/5 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                 {[
                   { key: "showPhoto" as const, label: "Show my photo to non-connections" },
                   { key: "showDepartment" as const, label: "Show my department" },
                   { key: "girlsFirstProtection" as const, label: "Girls-first protection", desc: "Only people who've interacted with your content can message you first." },
                   { key: "allowMessageRequests" as const, label: "Message requests" },
                 ].map(({ key, label, desc }) => (
-                  <div key={key} className="flex justify-between items-start p-4 bg-white border border-black/5 rounded-xl shadow-sm">
-                    <div className="flex-1 pr-4">
-                      <p className="font-medium text-[#0f0f10] text-sm">{label}</p>
-                      {desc && <p className="text-xs text-neutral-500 mt-1 leading-relaxed">{desc}</p>}
+                  <div key={key} className="flex justify-between items-start p-5 hover:bg-neutral-50/50 transition-colors">
+                    <div className="flex-1 pr-4 text-left">
+                      <p className="font-bold text-[#0f0f10] text-sm">{label}</p>
+                      {desc && <p className="text-xs text-neutral-500 mt-1 leading-relaxed font-medium">{desc}</p>}
                     </div>
                     <Toggle on={settings[key]} onToggle={() => toggle(key)} />
                   </div>
                 ))}
-              </div>
+              </Card>
             </div>
 
             {/* Notifications */}
@@ -798,17 +1034,17 @@ export default function MyProfilePage() {
                 <Bell className="w-4 h-4 text-[#505f78]" />
                 <h3 className="font-dmserif font-semibold text-[#0f0f10]">Notification Settings</h3>
               </div>
-              <div className="space-y-2">
+              <Card className="bg-white border border-black/5 rounded-[24px] divide-y divide-black/5 overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                 {[
                   { key: "matchNotifs" as const, label: "Match notifications" },
                   { key: "eventReminders" as const, label: "Event reminders" },
                 ].map(({ key, label }) => (
-                  <div key={key} className="flex justify-between items-center p-4 bg-white border border-black/5 rounded-xl shadow-sm">
-                    <p className="font-medium text-[#0f0f10] text-sm">{label}</p>
+                  <div key={key} className="flex justify-between items-center p-5 hover:bg-neutral-50/50 transition-colors text-left">
+                    <p className="font-bold text-[#0f0f10] text-sm">{label}</p>
                     <Toggle on={settings[key]} onToggle={() => toggle(key)} />
                   </div>
                 ))}
-              </div>
+              </Card>
             </div>
 
             {/* Club Admin Management */}
@@ -818,8 +1054,8 @@ export default function MyProfilePage() {
                   <Shield className="w-4 h-4 text-[#505f78]" />
                   <h3 className="font-dmserif font-semibold text-[#0f0f10]">Manage Club Admins</h3>
                 </div>
-                <Card className="bg-white border border-black/5 p-4 rounded-xl shadow-sm">
-                  <p className="text-xs text-neutral-500 mb-4 italic">
+                <Card className="bg-white border border-black/5 p-6 rounded-[24px] shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                  <p className="text-xs text-neutral-500 mb-4 font-medium italic text-left">
                     Add other Gitam emails to allow them to manage this club account.
                   </p>
                   <div className="space-y-3">
@@ -827,18 +1063,18 @@ export default function MyProfilePage() {
                       <input
                         type="email"
                         placeholder="admin@student.gitam.edu"
-                        className="flex-1 bg-white border border-black/5 h-10 px-3 rounded-lg text-sm focus:outline-none focus:border-[#505f78] text-[#0f0f10]"
+                        className="flex-1 bg-white border border-black/10 h-10 px-3.5 rounded-full text-sm focus:outline-none focus:border-black text-[#0f0f10]"
                       />
-                      <Button size="sm" className="bg-black text-white hover:bg-[#505f78] rounded-lg">
+                      <Button className="bg-black text-white hover:bg-neutral-800 rounded-full px-5 font-bold text-xs h-10 shadow-sm transition-all">
                         Add
                       </Button>
                     </div>
 
                     {/* Placeholder for list of admins */}
-                    <div className="pt-2 border-t border-black/5">
-                      <div className="flex items-center justify-between py-2">
-                        <span className="text-sm text-[#0f0f10]">You (Owner)</span>
-                        <Badge variant="outline" className="text-[10px] uppercase">
+                    <div className="pt-3 border-t border-black/5">
+                      <div className="flex items-center justify-between py-2 text-left">
+                        <span className="text-sm font-bold text-[#0f0f10]">You (Owner)</span>
+                        <Badge variant="outline" className="text-[10px] uppercase font-bold bg-[#505f78]/5 text-[#505f78] border-[#505f78]/10 rounded-full px-2.5 shadow-none">
                           Owner
                         </Badge>
                       </div>
@@ -854,29 +1090,22 @@ export default function MyProfilePage() {
                 <Shield className="w-4 h-4 text-[#505f78]" />
                 <h3 className="font-dmserif font-semibold text-[#0f0f10]">Account</h3>
               </div>
-              <div className="bg-white border border-black/5 rounded-xl overflow-hidden divide-y divide-black/5 shadow-sm">
+              <div className="bg-white border border-black/5 rounded-[24px] overflow-hidden divide-y divide-black/5 shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
                 {role === 'super_admin' && (
-                  <Link href="/admin" className="w-full block text-left px-4 py-3.5 text-sm text-black font-bold hover:bg-neutral-100 transition-colors">
+                  <Link href="/admin" className="w-full block text-left px-5 py-4 text-sm text-black font-bold hover:bg-neutral-50 transition-colors">
                     Access Super Admin Dashboard
                   </Link>
                 )}
                 <button
                   onClick={() => setShowPasswordModal(true)}
-                  className="w-full text-left px-4 py-3.5 text-sm text-[#0f0f10] hover:bg-neutral-50 transition-colors"
+                  className="w-full text-left px-5 py-4 text-sm text-[#0f0f10] font-bold hover:bg-neutral-50 transition-colors"
                 >
                   Change Password
                 </button>
 
-                {/* <button
-                  onClick={handleExportData}
-                  className="w-full text-left px-4 py-3.5 text-sm text-[#0f0f10] hover:bg-neutral-50 transition-colors"
-                >
-                  Export My Data
-                </button> */}
-
                 <button
                   onClick={handleSignOut}
-                  className="w-full text-left px-4 py-3.5 text-sm text-[#0f0f10] hover:bg-neutral-50 transition-colors"
+                  className="w-full text-left px-5 py-4 text-sm text-[#0f0f10] font-bold hover:bg-neutral-50 transition-colors"
                 >
                   Sign Out
                 </button>
@@ -884,7 +1113,7 @@ export default function MyProfilePage() {
                 <button
                   disabled={isDeleting}
                   onClick={handleDeleteAccount}
-                  className={`w-full text-left px-4 py-3.5 text-sm text-red-600 hover:bg-red-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
+                  className={`w-full text-left px-5 py-4 text-sm text-red-600 font-bold hover:bg-red-50 transition-colors ${isDeleting ? 'opacity-50 pointer-events-none' : ''}`}
                 >
                   {isDeleting ? 'Deleting...' : 'Delete Account'}
                 </button>

@@ -87,32 +87,7 @@ const PURPOSE_OPTIONS = [
   },
 ];
 
-const INTEREST_CATEGORIES = [
-  { tag: "Photography", icon: Camera },
-  { tag: "Music", icon: Music },
-  { tag: "Gaming", icon: Gamepad2 },
-  { tag: "Fitness", icon: Dumbbell },
-  { tag: "Coding", icon: Code },
-  { tag: "Design", icon: Palette },
-  { tag: "Film", icon: Film },
-  { tag: "AI / ML", icon: Brain },
-  { tag: "Startups", icon: Rocket },
-  { tag: "Art", icon: PenTool },
-  { tag: "Books", icon: BookOpenCheck },
-  { tag: "Open Mic", icon: Mic2 },
-  { tag: "Debate", icon: MessageCircle },
-  { tag: "Travel", icon: Globe },
-  { tag: "Cafe Hopping", icon: Coffee },
-  { tag: "Hiking", icon: Mountain },
-  { tag: "Poetry", icon: BookOpen },
-  { tag: "Cooking", icon: Heart },
-  { tag: "Chess", icon: Trophy },
-  { tag: "Esports", icon: Zap },
-  { tag: "Robotics", icon: FlaskConical },
-  { tag: "Dance", icon: Sparkles },
-  { tag: "Psychology", icon: Lightbulb },
-  { tag: "Finance", icon: Target },
-];
+import { INTEREST_TAGS } from "@/constants/interestTags";
 
 const DEPARTMENTS = [
   "CSE",
@@ -174,7 +149,7 @@ export default function OnboardingPage() {
   // Step 4: Profile
   const [department, setDepartment] = useState("");
   const [year, setYear] = useState("");
-  useState(name || ""); // Pre-fills with their name if available
+  // useState(name || ""); // Pre-fills with their name if available
   const [displayName, setDisplayName] = useState(name || "");
   const [username, setUsername] = useState(contextUsername || "");
   const [profileImage, setProfileImage] = useState<File | null>(null);
@@ -183,6 +158,7 @@ export default function OnboardingPage() {
   // General
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+  const [fromSignup, setFromSignup] = useState(false);
 
   const isProfileValid = Boolean(
     displayName.trim() &&
@@ -191,6 +167,13 @@ export default function OnboardingPage() {
     year &&
     gender
   );
+
+  // Role Safety: Redirect Club Admins to Club Dashboard
+  useEffect(() => {
+    if (role === "club") {
+      router.replace("/club-dashboard");
+    }
+  }, [role, router]);
 
   // Restore step from session
   useEffect(() => {
@@ -217,14 +200,13 @@ export default function OnboardingPage() {
     const pendingProfile = sessionStorage.getItem("intrst_pending_profile");
 
     if (pendingProfile) {
-      const data = JSON.parse(pendingProfile);
-
-      if (data.name) {
-        setDisplayName(data.name);
-      }
-
-      if (data.username) {
-        setUsername(data.username);
+      try {
+        const data = JSON.parse(pendingProfile);
+        if (data.name) setDisplayName(data.name);
+        if (data.username) setUsername(data.username);
+        setFromSignup(true); // lock fields since data came from signup
+      } catch (e) {
+        // ignore parse errors
       }
     }
   }, []);
@@ -267,15 +249,9 @@ export default function OnboardingPage() {
     setIsLoading(true);
     setErrorMsg("");
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        throw new Error("User session not found");
+      if (!user_id) {
+        throw new Error("User session not found in context. Please refresh and try again.");
       }
-
-      const user_id = user.id;
 
       let avatarUrl = "";
 
@@ -302,7 +278,7 @@ export default function OnboardingPage() {
       let parsedYear = parseInt(year);
       if (isNaN(parsedYear)) parsedYear = 6;
 
-      const bio = "";
+      // const bio = "";
 
       const payload: Record<string, unknown> = {
         username: username || undefined,
@@ -709,7 +685,7 @@ export default function OnboardingPage() {
 
                 {/* Interest Chips */}
                 <div className="flex flex-wrap gap-2 mb-6 max-h-[320px] overflow-y-auto pr-1 hide-scrollbar">
-                  {INTEREST_CATEGORIES.map((item, i) => {
+                  {INTEREST_TAGS.map((item, i) => {
                     const isSelected = selectedInterests.includes(item.tag);
                     const IconComp = item.icon;
                     return (
@@ -813,13 +789,22 @@ export default function OnboardingPage() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">
                       Display Name
+                      {fromSignup && (
+                        <span className="ml-2 text-[#505f78] normal-case tracking-normal font-normal text-[9px]">
+                          · set during signup
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      value={typeof displayName !== 'undefined' ? displayName : ''}
-                      onChange={(e) => typeof setDisplayName === 'function' && setDisplayName(e.target.value)}
+                      value={displayName}
+                      onChange={(e) => !fromSignup && setDisplayName(e.target.value)}
+                      readOnly={fromSignup}
                       placeholder="e.g. Priya S."
-                      className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 font-medium bg-white"
+                      className={`w-full h-11 border rounded-xl px-3.5 text-xs outline-none transition-all font-medium ${fromSignup
+                        ? "bg-neutral-50 border-neutral-200 text-neutral-500 cursor-not-allowed"
+                        : "bg-white border-[#c5c6cd] focus:border-black focus:ring-1 focus:ring-black text-neutral-900"
+                        }`}
                     />
                   </div>
 
@@ -827,17 +812,28 @@ export default function OnboardingPage() {
                   <div>
                     <label className="block text-[10px] font-bold tracking-widest uppercase text-neutral-400 mb-1.5">
                       Username
+                      {fromSignup && (
+                        <span className="ml-2 text-[#505f78] normal-case tracking-normal font-normal text-[9px]">
+                          · set during signup
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
-                      value={typeof username !== 'undefined' ? username : ''}
-                      onChange={(e) => typeof setUsername === 'function' && setUsername(e.target.value)}
+                      value={username}
+                      onChange={(e) => !fromSignup && setUsername(e.target.value)}
+                      readOnly={fromSignup}
                       placeholder="@ unique_username"
-                      className="w-full h-11 border border-[#c5c6cd] rounded-xl px-3.5 text-xs outline-none focus:border-black focus:ring-1 focus:ring-black transition-all text-neutral-900 font-medium bg-white"
+                      className={`w-full h-11 border rounded-xl px-3.5 text-xs outline-none transition-all font-medium ${fromSignup
+                        ? "bg-neutral-50 border-neutral-200 text-neutral-500 cursor-not-allowed"
+                        : "bg-white border-[#c5c6cd] focus:border-black focus:ring-1 focus:ring-black text-neutral-900"
+                        }`}
                     />
-                    <p className="text-[10px] text-neutral-400 mt-1.5 pl-1">
-                      Letters, numbers, and underscores only.
-                    </p>
+                    {!fromSignup && (
+                      <p className="text-[10px] text-neutral-400 mt-1.5 pl-1">
+                        Letters, numbers, and underscores only.
+                      </p>
+                    )}
                   </div>
 
                   {/* Department Dropdown */}

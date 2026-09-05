@@ -9,6 +9,7 @@ import { Loader2, ArrowRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { apiFetch } from "@/lib/apiClient";
 import { motion } from "framer-motion";
+import { routeAfterAuth } from "@/lib/authRouting";
 
 const buttonClickInteraction = {
   whileHover: { scale: 1.02, y: -1 },
@@ -26,6 +27,8 @@ function VerifyContent() {
   const [resendLoading, setResendLoading] = useState(false);
   const [verifyType, setVerifyType] = useState<any>("signup");
   const [countdown, setCountdown] = useState(60);
+  // Set by signup/page.tsx when the email was found in admin_whitelist
+  const [isAdminSignup, setIsAdminSignup] = useState(false);
 
   useEffect(() => {
     if (countdown > 0) {
@@ -53,6 +56,12 @@ function VerifyContent() {
     const typeParam = searchParams.get("type");
     if (typeParam) {
       setVerifyType(typeParam);
+    }
+
+    // isAdmin=true is appended by signup/page.tsx when the email
+    // was found active in public.admin_whitelist.
+    if (searchParams.get("isAdmin") === "true") {
+      setIsAdminSignup(true);
     }
   }, [searchParams]);
 
@@ -96,10 +105,11 @@ function VerifyContent() {
         });
       }
 
-      // 4. Initialize profile in backend if explicitly signing up
+      // Only initialize the student profile for non-admin signups.
+      // Admin profiles are created during the /auth/admin/setup step.
       const pendingProfileStr = sessionStorage.getItem("intrst_pending_profile");
 
-      if (verifyType === 'signup' && pendingProfileStr) {
+      if (verifyType === 'signup' && pendingProfileStr && !isAdminSignup) {
         try {
           const profileInfo = JSON.parse(pendingProfileStr);
           await apiFetch("/auth/initialize-profile", {
@@ -120,27 +130,17 @@ function VerifyContent() {
       sessionStorage.removeItem("intrst_pending_profile");
       await new Promise(resolve => setTimeout(resolve, 300));
 
-      try {
-        console.log("⏳ calling /auth/me...");
-        const meData = await apiFetch("/auth/me", { token: accessToken });
-        console.log("✅ meData:", meData);
-        // Determine if onboarding is truly needed
-        const hasCompletedOnboarding = !!(meData?.profile?.department || meData?.profile?.year_of_study);
-        const isSigninFlow = verifyType === "email" || verifyType === "magiclink";
-
-        if (hasCompletedOnboarding || isSigninFlow) {
-          router.replace("/home");
-        } else {
-          router.replace("/onboarding");
-        }
-      } catch (meError) {
-        console.error("Failed to fetch profile info during verification:", meError);
-        if (verifyType === "email" || verifyType === "magiclink") {
-          router.replace("/home");
-        } else {
-          router.replace("/onboarding");
-        }
+      // New admin signups have no DB profile yet — send to setup.
+      // Existing admins and students are handled by routeAfterAuth.
+      if (isAdminSignup && verifyType === 'signup') {
+        router.replace("/auth/admin/setup");
+        return;
       }
+
+      // Route based on role from the user's profile.
+      // routeAfterAuth handles: admin → /admin, user → /home,
+      // no profile yet → /onboarding.
+      await routeAfterAuth(router, accessToken);
 
     } catch (err: any) {
       console.error("Verification flow failed:", err);
